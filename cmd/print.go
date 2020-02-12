@@ -22,12 +22,21 @@ var printCmd = &cobra.Command{
 		buildInstances := stx.GetBuildInstances(args, "cfn")
 		stx.Process(buildInstances, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 			fmt.Println(au.Cyan(buildInstance.DisplayPath))
-			yml, _ := yaml.Marshal(cueValue)
-			fmt.Printf("%s\n", string(yml))
+
+			yml, ymlErr := yaml.Marshal(cueValue)
+
+			if ymlErr != nil {
+				fmt.Println(au.Red(ymlErr.Error()))
+			} else {
+				fmt.Printf("%s\n", string(yml))
+			}
+
 		})
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(printCmd)
+	// TODO add flag to skip/hide errors
+	// TODO add flag to show only errors
 }
