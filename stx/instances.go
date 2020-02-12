@@ -12,8 +12,8 @@ import (
 
 type instanceHandler func(*build.Instance, *cue.Instance, cue.Value)
 
-// LoadCueInstances loads the cue files in the specified pkg, with the args (eg: ./test.cue or ./...)
-func LoadCueInstances(args []string, pkg string, handler instanceHandler) {
+// GetBuildInstances loads and parses cue files and returns a list of build instances
+func GetBuildInstances(args []string, pkg string) []*build.Instance {
 	const syntaxVersion = -1000 + 13
 
 	config := load.Config{
@@ -32,6 +32,11 @@ func LoadCueInstances(args []string, pkg string, handler instanceHandler) {
 	// load finds files based on args and passes those to build
 	// buildInstances is a list of build.Instances, each has been parsed
 	buildInstances := load.Instances(args, &config)
+	return buildInstances
+}
+
+// Process iterates over instances applying the handler function for each
+func Process(buildInstances []*build.Instance, handler instanceHandler) {
 
 	for _, buildInstance := range buildInstances {
 		// A cue instance defines a single configuration based on a collection of underlying CUE files.

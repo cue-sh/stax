@@ -21,8 +21,8 @@ var dplCmd = &cobra.Command{
 	Long:  `Yada yada yada.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		stx.EnsureVaultSession()
-
-		stx.LoadCueInstances(args, "cfn", func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
+		buildInstances := stx.GetBuildInstances(args, "cfn")
+		stx.Process(buildInstances, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 			stacks := stx.GetStacks(cueValue)
 			if stacks != nil {
 				//fmt.Printf("%+v\n\n", top)
