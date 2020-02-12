@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/TangoGroup/stx/stx"
-	"github.com/logrusorgru/aurora"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
@@ -18,7 +17,7 @@ var printCmd = &cobra.Command{
 	Short: "Prints the Cue output as YAML",
 	Long:  `yada yada yada`,
 	Run: func(cmd *cobra.Command, args []string) {
-		au := aurora.NewAurora(true)
+
 		buildInstances := stx.GetBuildInstances(args, "cfn")
 		stx.Process(buildInstances, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 			fmt.Println(au.Cyan(buildInstance.DisplayPath))

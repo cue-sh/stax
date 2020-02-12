@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/logrusorgru/aurora"
+
 	"github.com/spf13/cobra"
 )
 
 var environment, regionCode string
+var au aurora.Aurora
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -28,7 +31,7 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize()
-
+	au = aurora.NewAurora(true)
 	rootCmd.PersistentFlags().StringVarP(&environment, "environment", "e", "", "Any environment listed in maps/Environments.cue")
 	rootCmd.PersistentFlags().StringVarP(&regionCode, "region-code", "r", "", "Any region code listed in maps/RegionCodes.cue")
 
