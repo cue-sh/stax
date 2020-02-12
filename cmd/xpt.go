@@ -8,8 +8,8 @@ import (
 	"regexp"
 
 	"cuelang.org/go/cue"
-
 	"cuelang.org/go/cue/build"
+	"github.com/TangoGroup/stx/stx"
 	"github.com/ghodss/yaml"
 	"github.com/logrusorgru/aurora"
 	"github.com/spf13/cobra"
@@ -21,11 +21,10 @@ var xptCmd = &cobra.Command{
 	Short: "eXPorTs cue templates that implement the Stacks:[] pattern.",
 	Long:  `Yada yada yada.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		loadCueInstances(args, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
-			stacks := getStacks(cueValue)
+		au := aurora.NewAurora(true)
+		stx.LoadCueInstances(args, "cfn", func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
+			stacks := stx.GetStacks(cueValue)
 			if stacks != nil {
-				//fmt.Printf("%+v\n\n", top)
-				au := aurora.NewAurora(true)
 				for stackName, stack := range stacks {
 					pattern := ".*"
 					if environment != "" || regionCode != "" {

@@ -7,6 +7,7 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
+	"github.com/TangoGroup/stx/stx"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/logrusorgru/aurora"
@@ -19,10 +20,10 @@ var dplCmd = &cobra.Command{
 	Short: "DePLoys a stack by creating a changeset and previews expected changes.",
 	Long:  `Yada yada yada.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		ensureVaultSession()
+		stx.EnsureVaultSession()
 
-		loadCueInstances(args, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
-			stacks := getStacks(cueValue)
+		stx.LoadCueInstances(args, "cfn", func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
+			stacks := stx.GetStacks(cueValue)
 			if stacks != nil {
 				//fmt.Printf("%+v\n\n", top)
 				au := aurora.NewAurora(true)
@@ -32,9 +33,7 @@ var dplCmd = &cobra.Command{
 
 					fmt.Printf("%s %s %s %s:%s\n", au.White("Deploying"), au.Magenta(stackName), au.White("⤏"), au.Green(stack.Profile), au.Brown(stack.Region))
 
-					//TODO: reduce this to a single call to getSesession(stack.Profile). getSession should then call getProfileCredentials
-					credentials := getProfileCredentials(stack.Profile)
-					session := getSession(credentials)
+					session := stx.GetSession(stack.Profile)
 
 					templateFileBytes, _ := ioutil.ReadFile(fileName)
 					templateBody := string(templateFileBytes)
