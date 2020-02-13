@@ -32,7 +32,7 @@ var xptCmd = &cobra.Command{
 }
 
 func saveStackAsYml(stackName string, stack stx.Stack, buildInstance *build.Instance, cueValue cue.Value) string {
-	dir := filepath.Clean(buildInstance.Root + "/../yml/cfn/" + stack.Profile)
+	dir := filepath.Clean(buildInstance.Root + "/" + config.Xpt.YmlPath + "/" + stack.Profile)
 	os.MkdirAll(dir, 0766)
 	//fmt.Println(err)
 	fileName := dir + "/" + stackName + ".cfn.yml"
