@@ -6,9 +6,12 @@ import (
 	"cuelang.org/go/cue"
 )
 
+// Stack represents an individual stack
+type Stack struct{ Profile, Region, Environment, RegionCode string }
+
 // Stacks represents the Go equivalent of the Cue Stacks pattern
 // it allows stacks to be indexed via for range
-type Stacks map[string]struct{ Profile, Region, Environment, RegionCode string }
+type Stacks map[string]Stack
 
 // GetStacks returns the stacks as decoded from the cue instance value
 func GetStacks(cueValue cue.Value) Stacks {
