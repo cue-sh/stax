@@ -4,7 +4,7 @@ Go-based CLI for managing CloudFormation stacks written in Cue
 ## Installation
 1. Clone the repo to your local Go source folder. (It could be in your home folder: `~/go/src/github.com/TangoGroup/stx`)
 2. From the folder with `main.go` run `go build ./*.go`
-3. Soft link to the binary: `ln -s ~/go/src/github.com/TangoGroup/stx/main /usr/loca/bin/stx`
+3. Soft link to the binary: `ln -s ~/go/src/github.com/TangoGroup/stx/main /usr/local/bin/stx`
 
 ## Usage
 
