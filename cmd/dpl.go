@@ -57,7 +57,8 @@ var dplCmd = &cobra.Command{
 					if validateTemplateErr != nil {
 						fmt.Printf(" %s\n", au.Red("✕"))
 						fmt.Printf("%+v\n", validateTemplateErr)
-						os.Exit(1)
+						// os.Exit(1)
+						continue
 					}
 
 					// template must have validated
@@ -104,7 +105,8 @@ var dplCmd = &cobra.Command{
 					describeChangesetOuput, describeChangesetErr := cfn.DescribeChangeSet(&describeChangesetInput)
 					if describeChangesetErr != nil {
 						fmt.Printf("%+v", au.Red(describeChangesetErr))
-						os.Exit(1)
+						// os.Exit(1)
+						continue
 					}
 
 					s.Stop()
@@ -112,7 +114,8 @@ var dplCmd = &cobra.Command{
 					if *describeChangesetOuput.ExecutionStatus != "AVAILABLE" || *describeChangesetOuput.Status != "CREATE_COMPLETE" {
 						fmt.Printf("%+v", describeChangesetOuput)
 						fmt.Println("No changes to deploy.")
-						os.Exit(0)
+						// os.Exit(0)
+						continue
 					}
 
 					if len(describeChangesetOuput.Changes) > 0 {
@@ -140,7 +143,8 @@ var dplCmd = &cobra.Command{
 
 					if executeChangeSetErr != nil {
 						fmt.Printf("%+v", au.Red(executeChangeSetErr))
-						os.Exit(1)
+						// os.Exit(1)
+						continue
 					}
 
 					fmt.Printf("%s %s %s %s:%s\n", au.White("Executing"), au.BrightBlue(changeSetName), au.White("⤏"), au.Magenta(stackName), au.Cyan(stack.Region))
