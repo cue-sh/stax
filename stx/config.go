@@ -12,6 +12,7 @@ import (
 
 const configCue = `
 {
+	Auth: Ykman: Profile: string | *""
 	Xpt: YmlPath: string | *"./yml"
 }
 `
@@ -19,7 +20,12 @@ const configCue = `
 // Config holds config values parsed from config.stx.cue files
 type Config struct {
 	CueRoot string
-	Xpt     struct {
+	Auth    struct {
+		Ykman struct {
+			Profile string
+		}
+	}
+	Xpt struct {
 		YmlPath string
 	}
 }

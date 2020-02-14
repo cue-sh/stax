@@ -25,7 +25,7 @@ var dplCmd = &cobra.Command{
 	Short: "DePLoys a stack by creating a changeset and previews expected changes.",
 	Long:  `Yada yada yada.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		stx.EnsureVaultSession()
+		stx.EnsureVaultSession(config)
 		buildInstances := stx.GetBuildInstances(args, "cfn")
 		stx.Process(buildInstances, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 			stacks := stx.GetStacks(cueValue)

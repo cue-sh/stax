@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -12,14 +13,20 @@ import (
 )
 
 // EnsureVaultSession is used to prompt for MFA if aws-vault session has expired
-func EnsureVaultSession() {
+func EnsureVaultSession(config Config) {
 	sessionsOut, _ := exec.Command("aws-vault", "list", "--sessions").Output()
 	//fmt.Println(string(sessionsOut))
+	var mfa string
 	if len(sessionsOut) < 1 {
-		fmt.Print("MFA: ")
-		var input string
-		fmt.Scanln(&input)
-		err := exec.Command("aws-vault", "exec", "-t", input, "gloo-users").Run()
+		if len(config.Auth.Ykman.Profile) > 1 {
+			ykmanOutput, _ := exec.Command("ykman", "oath", "code", "-s", config.Auth.Ykman.Profile).Output()
+			mfa = strings.TrimSpace(string(ykmanOutput))
+			fmt.Println("Pulled MFA from ykman profile ", config.Auth.Ykman.Profile)
+		} else {
+			fmt.Print("MFA: ")
+			fmt.Scanln(&mfa)
+		}
+		err := exec.Command("aws-vault", "exec", "-t", mfa, "gloo-users").Run()
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
