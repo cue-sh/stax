@@ -46,7 +46,7 @@ var printCmd = &cobra.Command{
 
 		})
 
-		if totalErrors > 0 {
+		if !printHideErrors && totalErrors > 0 {
 			fmt.Println("Total errors: ", totalErrors)
 		}
 	},
