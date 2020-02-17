@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/TangoGroup/stx/stx"
 
@@ -11,6 +12,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var printOnlyErrors, printHideErrors bool
+
 // printCmd represents the print command
 var printCmd = &cobra.Command{
 	Use:   "print",
@@ -18,24 +21,41 @@ var printCmd = &cobra.Command{
 	Long:  `yada yada yada`,
 	Run: func(cmd *cobra.Command, args []string) {
 
+		if printOnlyErrors && printHideErrors {
+			fmt.Println(au.Red("Cannot show only errors while hiding them."))
+			os.Exit(1)
+		}
+		totalErrors := 0
 		buildInstances := stx.GetBuildInstances(args, "cfn")
 		stx.Process(buildInstances, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
-			fmt.Println(au.Cyan(buildInstance.DisplayPath))
 
 			yml, ymlErr := yaml.Marshal(cueValue)
 
 			if ymlErr != nil {
-				fmt.Println(au.Red(ymlErr.Error()))
+				totalErrors++
+				if !printHideErrors {
+					fmt.Println(au.Cyan(buildInstance.DisplayPath))
+					fmt.Println(au.Red(ymlErr.Error()))
+				}
 			} else {
-				fmt.Printf("%s\n", string(yml))
+				if !printOnlyErrors {
+					fmt.Println(au.Cyan(buildInstance.DisplayPath))
+					fmt.Printf("%s\n", string(yml))
+				}
 			}
 
 		})
+
+		if !printHideErrors && totalErrors > 0 {
+			fmt.Println("Total errors: ", totalErrors)
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(printCmd)
 	// TODO add flag to skip/hide errors
-	// TODO add flag to show only errors
+
+	printCmd.Flags().BoolVar(&printOnlyErrors, "only-errors", false, "Only print errors. Cannot be used in concjunction with --hide-errors")
+	printCmd.Flags().BoolVar(&printHideErrors, "hide-errors", false, "Hide errors. Cannot be used in concjunction with --only-errors")
 }
