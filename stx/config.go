@@ -2,7 +2,10 @@ package stx
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"os/user"
+	"path/filepath"
 	"strings"
 
 	"cuelang.org/go/cue"
@@ -10,17 +13,16 @@ import (
 	"github.com/logrusorgru/aurora"
 )
 
-const configCue = `
-{
-	Auth: Ykman: Profile: string | *""
-	Xpt: YmlPath: string | *"./yml"
-}
+const configCue = `package stx
+Auth: Ykman: Profile: string | *""
+Xpt: YmlPath: string | *"./yml"
 `
 
 // Config holds config values parsed from config.stx.cue files
 type Config struct {
-	CueRoot string
-	Auth    struct {
+	CueRoot     string
+	OsSeparator string
+	Auth        struct {
 		Ykman struct {
 			Profile string
 		}
@@ -37,6 +39,7 @@ func LoadConfig() Config {
 	separator := string(os.PathSeparator)
 	dirs := strings.Split(wd, separator)
 	dirsLen := len(dirs)
+	usr, _ := user.Current()
 	var path string
 	// traverse the directory tree starting from PWD going up to successive parents
 	for i := dirsLen; i > 0; i-- {
@@ -49,21 +52,31 @@ func LoadConfig() Config {
 
 	var buildInstances []*build.Instance
 	var cueInstances []*cue.Instance
-	var configInstance, userConfigInstance *cue.Instance
+	var configInstance *cue.Instance
 	var configValue cue.Value
+	var buildArgs []string
 
 	// include baked-in cue config
-	var runtime cue.Runtime
-	configInstance, _ = runtime.Compile("stxConfig", configCue)
-	configValue = configInstance.Value()
-	// expect config.stx.cue to be colocated with cue.mod
-	configPath := path + "/config.stx.cue"
-	if _, err := os.Stat(configPath); !os.IsNotExist(err) {
-		buildInstances = GetBuildInstances([]string{configPath}, "stx")
-		cueInstances = cue.Build(buildInstances)
-		userConfigInstance = cueInstances[0]
-		configValue = configValue.Unify(userConfigInstance.Value())
+	configSchema := "/tmp/config.stx.cue"
+	ioutil.WriteFile(configSchema, []byte(configCue), 0766)
+	buildArgs = append(buildArgs, configSchema)
+
+	// look for global config in ~/.stx/config.stx.cue
+	homeConfigPath := filepath.Clean(usr.HomeDir + "/.stx/config.stx.cue")
+	if _, err := os.Stat(homeConfigPath); !os.IsNotExist(err) {
+		buildArgs = append(buildArgs, homeConfigPath)
 	}
+
+	// look for config.stx.cue colocated with cue.mod
+	localConfigPath := path + "/config.stx.cue"
+	if _, err := os.Stat(localConfigPath); !os.IsNotExist(err) {
+		buildArgs = append(buildArgs, localConfigPath)
+	}
+
+	buildInstances = GetBuildInstances(buildArgs, "stx")
+	cueInstances = cue.Build(buildInstances)
+	configInstance = cueInstances[0]
+	configValue = configInstance.Value()
 
 	configErr := configValue.Err()
 	if configErr != nil {
@@ -72,11 +85,12 @@ func LoadConfig() Config {
 		os.Exit(1)
 	}
 
-	cfg := Config{CueRoot: path}
+	cfg := Config{CueRoot: path, OsSeparator: separator}
 
 	decodeErr := configValue.Decode(&cfg)
 	if decodeErr != nil {
 		fmt.Println(decodeErr.Error())
+		os.Exit(1)
 	}
 
 	return cfg
