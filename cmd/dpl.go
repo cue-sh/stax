@@ -125,17 +125,24 @@ var dplCmd = &cobra.Command{
 						existingTemplate, _ := cfn.GetTemplate(&cloudformation.GetTemplateInput{
 							StackName: &stackName,
 						})
-						existingDoc, _ := ytbx.LoadDocuments([]byte(*existingTemplate.TemplateBody))
-						doc, _ := ytbx.LoadDocuments([]byte(templateBody))
-						report, _ := dyff.CompareInputFiles(
-							ytbx.InputFile{Documents: existingDoc},
-							ytbx.InputFile{Documents: doc},
-						)
-						reportWriter := &dyff.HumanReport{
-							Report:     report,
-							ShowBanner: false,
+						existingDoc, err := ytbx.LoadDocuments([]byte(*existingTemplate.TemplateBody))
+						if err != nil {
+							fmt.Println("Error getting template for stack: " + stackName)
+						} else {
+							doc, _ := ytbx.LoadDocuments([]byte(templateBody))
+							report, err := dyff.CompareInputFiles(
+								ytbx.InputFile{Documents: existingDoc},
+								ytbx.InputFile{Documents: doc},
+							)
+							if err != nil {
+								fmt.Println("Error creating template diff for stack: " + stackName)
+							}
+							reportWriter := &dyff.HumanReport{
+								Report:     report,
+								ShowBanner: false,
+							}
+							reportWriter.WriteReport(os.Stdout)
 						}
-						reportWriter.WriteReport(os.Stdout)
 					} else {
 						fmt.Println("No changes to resources.")
 					}
