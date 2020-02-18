@@ -30,12 +30,21 @@ func Execute() {
 	}
 }
 
+// Flags holds flags passed in from cli
+type Flags struct {
+	environment, regionCode, exclude string
+}
+
+// this should be the only global variable
+var flags Flags
+
 func init() {
 	cobra.OnInitialize()
 
-	rootCmd.PersistentFlags().StringP("environment", "e", "", "Any environment listed in maps/Environments.cue")
-	rootCmd.PersistentFlags().StringP("region-code", "r", "", "Any region code listed in maps/RegionCodes.cue")
-	rootCmd.PersistentFlags().StringP("exclude", "x", "", "Subdirectory paths matching this regular expression will be ignored.")
+	flags = Flags{}
+	rootCmd.PersistentFlags().StringVarP(&flags.environment, "environment", "e", "", "Any environment listed in maps/Environments.cue")
+	rootCmd.PersistentFlags().StringVarP(&flags.regionCode, "region-code", "r", "", "Any region code listed in maps/RegionCodes.cue")
+	rootCmd.PersistentFlags().StringVarP(&flags.exclude, "exclude", "x", "", "Subdirectory paths matching this regular expression will be ignored.")
 
 	au = aurora.NewAurora(true)
 	config = stx.LoadConfig()
