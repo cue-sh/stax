@@ -27,7 +27,7 @@ var dplCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		stx.EnsureVaultSession(config)
 		buildInstances := stx.GetBuildInstances(args, "cfn")
-		stx.Process(buildInstances, cmd.PersistentFlags().Lookup("exclude").Value.String(), func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
+		stx.Process(buildInstances, flags.exclude, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 			stacks := stx.GetStacks(cueValue)
 			if stacks != nil {
 				//fmt.Printf("%+v\n\n", top)

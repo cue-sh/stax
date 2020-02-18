@@ -20,7 +20,7 @@ var xptCmd = &cobra.Command{
 	Long:  `Yada yada yada.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		buildInstances := stx.GetBuildInstances(args, "cfn")
-		stx.Process(buildInstances, cmd.PersistentFlags().Lookup("exclude").Value.String(), func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
+		stx.Process(buildInstances, flags.exclude, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 			stacks := stx.GetStacks(cueValue)
 			if stacks != nil {
 				for stackName, stack := range stacks {

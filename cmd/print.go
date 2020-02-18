@@ -27,7 +27,7 @@ var printCmd = &cobra.Command{
 		}
 		totalErrors := 0
 		buildInstances := stx.GetBuildInstances(args, "cfn")
-		stx.Process(buildInstances, rootCmd.PersistentFlags().Lookup("exclude").Value.String(), func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
+		stx.Process(buildInstances, flags.exclude, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 
 			yml, ymlErr := yaml.Marshal(cueValue)
 
