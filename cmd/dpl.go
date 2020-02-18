@@ -122,13 +122,13 @@ var dplCmd = &cobra.Command{
 
 					if len(describeChangesetOuput.Changes) > 0 {
 						fmt.Printf("%+v\n", describeChangesetOuput.Changes)
-						existingTemplate, _ := cfn.GetTemplate(&cloudformation.GetTemplateInput{
+						existingTemplate, err := cfn.GetTemplate(&cloudformation.GetTemplateInput{
 							StackName: &stackName,
 						})
-						existingDoc, err := ytbx.LoadDocuments([]byte(*existingTemplate.TemplateBody))
 						if err != nil {
 							fmt.Println("Error getting template for stack: " + stackName)
 						} else {
+							existingDoc, _ := ytbx.LoadDocuments([]byte(*existingTemplate.TemplateBody))
 							doc, _ := ytbx.LoadDocuments([]byte(templateBody))
 							report, err := dyff.CompareInputFiles(
 								ytbx.InputFile{Documents: existingDoc},
