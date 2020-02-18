@@ -2,12 +2,14 @@ package stx
 
 import (
 	"fmt"
+	"regexp"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/build"
 	"cuelang.org/go/cue/load"
 	"cuelang.org/go/cue/parser"
+	"github.com/logrusorgru/aurora"
 )
 
 type instanceHandler func(*build.Instance, *cue.Instance, cue.Value)
@@ -36,9 +38,25 @@ func GetBuildInstances(args []string, pkg string) []*build.Instance {
 }
 
 // Process iterates over instances applying the handler function for each
-func Process(buildInstances []*build.Instance, handler instanceHandler) {
+func Process(buildInstances []*build.Instance, exclude string, handler instanceHandler) {
+
+	var excludeRegexp *regexp.Regexp
+	var excludeRegexpErr error
+
+	if exclude != "" {
+		excludeRegexp, excludeRegexpErr = regexp.Compile(exclude)
+		if excludeRegexpErr != nil {
+			au := aurora.NewAurora(true) // TODO move to logger
+			fmt.Println(au.Red(excludeRegexpErr.Error()))
+		}
+	}
 
 	for _, buildInstance := range buildInstances {
+		if exclude != "" {
+			if excludeRegexp.MatchString(buildInstance.DisplayPath) {
+				continue
+			}
+		}
 		// A cue instance defines a single configuration based on a collection of underlying CUE files.
 		// cue.Build is designed to produce a single cue.Instance from n build.Instances
 		// doing so however, would loose the connection between a stack and the build instance that
