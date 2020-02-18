@@ -136,12 +136,13 @@ var dplCmd = &cobra.Command{
 							)
 							if err != nil {
 								fmt.Println("Error creating template diff for stack: " + stackName)
+							} else {
+								reportWriter := &dyff.HumanReport{
+									Report:     report,
+									ShowBanner: false,
+								}
+								reportWriter.WriteReport(os.Stdout)
 							}
-							reportWriter := &dyff.HumanReport{
-								Report:     report,
-								ShowBanner: false,
-							}
-							reportWriter.WriteReport(os.Stdout)
 						}
 					} else {
 						fmt.Println("No changes to resources.")
