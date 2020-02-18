@@ -10,9 +10,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var environment, regionCode string
-var au aurora.Aurora
-var config stx.Config
+var au aurora.Aurora  // TODO move au to Logger pacakge
+var config stx.Config // TODO refactor use of global vars
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -34,8 +33,9 @@ func Execute() {
 func init() {
 	cobra.OnInitialize()
 
-	rootCmd.PersistentFlags().StringVarP(&environment, "environment", "e", "", "Any environment listed in maps/Environments.cue")
-	rootCmd.PersistentFlags().StringVarP(&regionCode, "region-code", "r", "", "Any region code listed in maps/RegionCodes.cue")
+	rootCmd.PersistentFlags().StringP("environment", "e", "", "Any environment listed in maps/Environments.cue")
+	rootCmd.PersistentFlags().StringP("region-code", "r", "", "Any region code listed in maps/RegionCodes.cue")
+	rootCmd.PersistentFlags().StringP("exclude", "x", "", "Subdirectory paths matching this regular expression will be ignored.")
 
 	au = aurora.NewAurora(true)
 	config = stx.LoadConfig()
