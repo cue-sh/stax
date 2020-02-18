@@ -16,6 +16,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/briandowns/spinner"
+	"github.com/gonvenience/ytbx"
+	"github.com/homeport/dyff/pkg/dyff"
 	"github.com/spf13/cobra"
 )
 
@@ -120,6 +122,20 @@ var dplCmd = &cobra.Command{
 
 					if len(describeChangesetOuput.Changes) > 0 {
 						fmt.Printf("%+v\n", describeChangesetOuput.Changes)
+						existingTemplate, _ := cfn.GetTemplate(&cloudformation.GetTemplateInput{
+							StackName: &stackName,
+						})
+						existingDoc, _ := ytbx.LoadDocuments([]byte(*existingTemplate.TemplateBody))
+						doc, _ := ytbx.LoadDocuments([]byte(templateBody))
+						report, _ := dyff.CompareInputFiles(
+							ytbx.InputFile{Documents: existingDoc},
+							ytbx.InputFile{Documents: doc},
+						)
+						reportWriter := &dyff.HumanReport{
+							Report:     report,
+							ShowBanner: false,
+						}
+						reportWriter.WriteReport(os.Stdout)
 					} else {
 						fmt.Println("No changes to resources.")
 					}
