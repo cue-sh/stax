@@ -127,6 +127,7 @@ var dplCmd = &cobra.Command{
 						})
 						if err != nil {
 							fmt.Println("Error getting template for stack: " + stackName)
+							continue
 						} else {
 							existingDoc, _ := ytbx.LoadDocuments([]byte(*existingTemplate.TemplateBody))
 							doc, _ := ytbx.LoadDocuments([]byte(templateBody))
@@ -136,6 +137,7 @@ var dplCmd = &cobra.Command{
 							)
 							if err != nil {
 								fmt.Println("Error creating template diff for stack: " + stackName)
+								continue
 							} else {
 								reportWriter := &dyff.HumanReport{
 									Report:     report,
@@ -146,6 +148,7 @@ var dplCmd = &cobra.Command{
 						}
 					} else {
 						fmt.Println("No changes to resources.")
+						continue
 					}
 
 					fmt.Printf("%s %s\n▶︎", au.BrightBlue("Execute change set?"), "Y to execute. Anything else to cancel.")
