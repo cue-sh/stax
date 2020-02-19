@@ -126,7 +126,7 @@ var dplCmd = &cobra.Command{
 							StackName: &stackName,
 						})
 						if err != nil {
-							fmt.Println("Error getting template for stack: " + stackName)
+							fmt.Printf("%+v\n", au.Red("Error getting template for stack: "+stackName))
 							continue
 						} else {
 							existingDoc, _ := ytbx.LoadDocuments([]byte(*existingTemplate.TemplateBody))
@@ -136,7 +136,7 @@ var dplCmd = &cobra.Command{
 								ytbx.InputFile{Documents: doc},
 							)
 							if err != nil {
-								fmt.Println("Error creating template diff for stack: " + stackName)
+								fmt.Printf("%+v\n", au.Red("Error creating template diff for stack: "+stackName))
 								continue
 							} else {
 								reportWriter := &dyff.HumanReport{
