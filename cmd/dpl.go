@@ -16,6 +16,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/briandowns/spinner"
+	"github.com/gonvenience/ytbx"
+	"github.com/homeport/dyff/pkg/dyff"
 	"github.com/spf13/cobra"
 )
 
@@ -120,8 +122,33 @@ var dplCmd = &cobra.Command{
 
 					if len(describeChangesetOuput.Changes) > 0 {
 						fmt.Printf("%+v\n", describeChangesetOuput.Changes)
+						existingTemplate, err := cfn.GetTemplate(&cloudformation.GetTemplateInput{
+							StackName: &stackName,
+						})
+						if err != nil {
+							fmt.Printf("%+v\n", au.Red("Error getting template for stack: "+stackName))
+							continue
+						} else {
+							existingDoc, _ := ytbx.LoadDocuments([]byte(*existingTemplate.TemplateBody))
+							doc, _ := ytbx.LoadDocuments([]byte(templateBody))
+							report, err := dyff.CompareInputFiles(
+								ytbx.InputFile{Documents: existingDoc},
+								ytbx.InputFile{Documents: doc},
+							)
+							if err != nil {
+								fmt.Printf("%+v\n", au.Red("Error creating template diff for stack: "+stackName))
+								continue
+							} else {
+								reportWriter := &dyff.HumanReport{
+									Report:     report,
+									ShowBanner: false,
+								}
+								reportWriter.WriteReport(os.Stdout)
+							}
+						}
 					} else {
 						fmt.Println("No changes to resources.")
+						continue
 					}
 
 					fmt.Printf("%s %s\n▶︎", au.BrightBlue("Execute change set?"), "Y to execute. Anything else to cancel.")
