@@ -18,7 +18,7 @@ import (
 // exeCmd represents the exe command
 var diffCmd = &cobra.Command{
 	Use:   "diff",
-	Short: "EXEcute a changeset for the evaluted leaves.",
+	Short: "DIFF against CloudFormation for the evaluted leaves.",
 	Long:  `Yada yada yada.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		stx.EnsureVaultSession(config)
