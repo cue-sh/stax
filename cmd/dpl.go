@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"os/user"
 	"path/filepath"
 	"regexp"
@@ -91,28 +90,17 @@ var dplCmd = &cobra.Command{
 					secretsPath := filepath.Clean(buildInstance.DisplayPath + "/secrets.env")
 					if _, err := os.Stat(secretsPath); !os.IsNotExist(err) {
 						fmt.Print(au.Gray(11, "  Decrypting secrets..."))
-						// SECRETS=$(aws-vault exec gloo-prod -- sops -d "$DIR/cue/$COMPONENT_PATH/$ENVIRONMENT-$REGION_CODE/secrets.env")
-						// args+=(--parameter-overrides $SECRETS)
-						sopsOutput, _ := exec.Command("aws-vault", "exec", "gloo-engineering-prod", "--", "sops", "-d", secretsPath).Output()
+						secrets := stx.DecryptSecrets(secretsPath, config.Sops.Profile)
 						// TODO check error
 						// sops output is key=value\n so first split on new line
 						var parameters []*cloudformation.Parameter
-						sopsLines := strings.Split(string(sopsOutput), "\n")
 
-						for _, sopLine := range sopsLines {
-							// split on =
-							if len(sopLine) > 0 {
-								sopsPairs := strings.Split(sopLine, "=")
-
-								sopsKey := sopsPairs[0]
-								sopsValue := sopsPairs[1]
-
-								parameter := cloudformation.Parameter{ParameterKey: &sopsKey, ParameterValue: &sopsValue}
-								parameters = append(parameters, &parameter)
-							}
+						for sopsKey, sopsValue := range secrets {
+							parameter := cloudformation.Parameter{ParameterKey: &sopsKey, ParameterValue: &sopsValue}
+							parameters = append(parameters, &parameter)
 						}
-
 						createChangeSetInput.SetParameters(parameters)
+
 						fmt.Printf("%s\n", au.Green("✓"))
 					}
 					fmt.Print(au.Gray(11, "  Creating changeset..."))
