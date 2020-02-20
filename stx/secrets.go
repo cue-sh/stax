@@ -11,13 +11,14 @@ import (
 type Secrets map[string]string
 
 // DecryptSecrets uses sops to decrypt the file with credentials from the given profile
-func DecryptSecrets(file, profile string) Secrets {
+func DecryptSecrets(file, profile string) (Secrets, error) {
 	credentials := GetProfileCredentials(profile)
 	// set ENV vars (primarily for sops decrypt)
 	os.Setenv("AWS_ACCESS_KEY_ID", credentials.AccessKeyID)
 	os.Setenv("AWS_SECRET_ACCESS_KEY", credentials.SecretAccessKey)
 	os.Setenv("AWS_SESSION_TOKEN", credentials.SessionToken)
-	sopsOutput, _ := decrypt.File(file, "Dotenv")
+	sopsOutput, sopsError := decrypt.File(file, "Dotenv")
+
 	// TODO check error
 	secrets := make(Secrets)
 	// sops output is key=value\n so first split on new line
@@ -31,5 +32,5 @@ func DecryptSecrets(file, profile string) Secrets {
 		}
 	}
 
-	return secrets
+	return secrets, sopsError
 }
