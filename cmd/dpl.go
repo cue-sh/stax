@@ -5,17 +5,17 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"os/user"
+	"path/filepath"
 	"regexp"
 	"strings"
-	"time"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
 	"github.com/TangoGroup/stx/stx"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/briandowns/spinner"
 	"github.com/gonvenience/ytbx"
 	"github.com/homeport/dyff/pkg/dyff"
 	"github.com/spf13/cobra"
@@ -35,9 +35,10 @@ var dplCmd = &cobra.Command{
 				//fmt.Printf("%+v\n\n", top)
 
 				for stackName, stack := range stacks {
-					fileName := saveStackAsYml(stackName, stack, buildInstance, cueValue)
 
-					fmt.Printf("%s %s ...", au.White("Validating"), au.Magenta(stackName))
+					fileName := saveStackAsYml(stackName, stack, buildInstance, cueValue)
+					fmt.Printf("%s %s %s %s:%s\n", au.White("Deploying"), au.Magenta(stackName), au.White("⤏"), au.Green(stack.Profile), au.Cyan(stack.Region))
+					fmt.Print(au.Gray(11, "  Validating template..."))
 
 					// get a session and cloudformation service client
 					session := stx.GetSession(stack.Profile)
@@ -64,12 +65,9 @@ var dplCmd = &cobra.Command{
 					}
 
 					// template must have validated
-					fmt.Printf(" %s\n", au.BrightGreen("✓"))
+					fmt.Printf("%s\n", au.BrightGreen("✓"))
 					//fmt.Printf("%+v\n", validateTemplateOutput.String())
-					fmt.Printf("%s %s %s %s:%s\n", au.White("Deploying"), au.Magenta(stackName), au.White("⤏"), au.Green(stack.Profile), au.Cyan(stack.Region))
-					s := spinner.New(spinner.CharSets[14], 100*time.Millisecond) // Build our new spinner
-					s.Color("green")
-					s.Start()
+
 					// look to see if stack exists
 					describeStacksInput := cloudformation.DescribeStacksInput{StackName: &stackName}
 					_, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)
@@ -89,6 +87,39 @@ var dplCmd = &cobra.Command{
 					}
 					createChangeSetInput.ChangeSetType = &changeSetType
 
+					// look for secrets file
+					secretsPath := filepath.Clean(buildInstance.DisplayPath + "/secrets.env")
+					if _, err := os.Stat(secretsPath); !os.IsNotExist(err) {
+						fmt.Print(au.Gray(11, "  Decrypting secrets..."))
+						// SECRETS=$(aws-vault exec gloo-prod -- sops -d "$DIR/cue/$COMPONENT_PATH/$ENVIRONMENT-$REGION_CODE/secrets.env")
+						// args+=(--parameter-overrides $SECRETS)
+						sopsOutput, _ := exec.Command("aws-vault", "exec", "gloo-engineering-prod", "--", "sops", "-d", secretsPath).Output()
+						// TODO check error
+						// sops output is key=value\n so first split on new line
+						var parameters []*cloudformation.Parameter
+						sopsLines := strings.Split(string(sopsOutput), "\n")
+
+						for _, sopLine := range sopsLines {
+							// split on =
+							if len(sopLine) > 0 {
+								sopsPairs := strings.Split(sopLine, "=")
+
+								sopsKey := sopsPairs[0]
+								sopsValue := sopsPairs[1]
+
+								parameter := cloudformation.Parameter{ParameterKey: &sopsKey, ParameterValue: &sopsValue}
+								parameters = append(parameters, &parameter)
+							}
+						}
+
+						createChangeSetInput.SetParameters(parameters)
+						fmt.Printf("%s\n", au.Green("✓"))
+					}
+					fmt.Print(au.Gray(11, "  Creating changeset..."))
+					// s := spinner.New(spinner.CharSets[14], 100*time.Millisecond) // Build our new spinner
+					// s.Color("green")
+					// s.Start()
+
 					createChangeSetOutput, createChangeSetErr := cfn.CreateChangeSet(&createChangeSetInput)
 
 					if createChangeSetErr != nil {
@@ -96,22 +127,20 @@ var dplCmd = &cobra.Command{
 						fmt.Printf("%+v %+v", createChangeSetOutput, createChangeSetErr)
 						os.Exit(1)
 					}
-
+					fmt.Printf("%s\n", au.Green("✓"))
 					describeChangesetInput := cloudformation.DescribeChangeSetInput{
 						ChangeSetName: &changeSetName,
 						StackName:     &stackName,
 					}
 
 					cfn.WaitUntilChangeSetCreateComplete(&describeChangesetInput)
-
+					// s.Stop()
 					describeChangesetOuput, describeChangesetErr := cfn.DescribeChangeSet(&describeChangesetInput)
 					if describeChangesetErr != nil {
 						fmt.Printf("%+v", au.Red(describeChangesetErr))
 						// os.Exit(1)
 						continue
 					}
-
-					s.Stop()
 
 					if *describeChangesetOuput.ExecutionStatus != "AVAILABLE" || *describeChangesetOuput.Status != "CREATE_COMPLETE" {
 						fmt.Printf("%+v", describeChangesetOuput)
