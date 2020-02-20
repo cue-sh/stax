@@ -92,6 +92,7 @@ var dplCmd = &cobra.Command{
 						fmt.Print(au.Gray(11, "  Decrypting secrets..."))
 
 						secrets, secretsErr := stx.DecryptSecrets(secretsPath, stack.SopsProfile)
+
 						if secretsErr != nil {
 							fmt.Print(au.Red(secretsErr))
 							continue
@@ -100,12 +101,11 @@ var dplCmd = &cobra.Command{
 						// sops output is key=value\n so first split on new line
 						var parameters []*cloudformation.Parameter
 
-						for sopsKey, sopsValue := range secrets {
-							parameter := cloudformation.Parameter{ParameterKey: &sopsKey, ParameterValue: &sopsValue}
-							parameters = append(parameters, &parameter)
+						for i := range secrets {
+							parameters = append(parameters, &cloudformation.Parameter{ParameterKey: &secrets[i][0], ParameterValue: &secrets[i][1]})
 						}
 						createChangeSetInput.SetParameters(parameters)
-
+						fmt.Printf("%+v\n", createChangeSetInput)
 						fmt.Printf("%s\n", au.Green("✓"))
 					}
 					fmt.Print(au.Gray(11, "  Creating changeset..."))

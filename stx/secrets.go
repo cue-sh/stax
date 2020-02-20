@@ -8,7 +8,7 @@ import (
 )
 
 // Secrets is a map of decrypted key:value pairs
-type Secrets map[string]string
+type Secrets [][]string
 
 // DecryptSecrets uses sops to decrypt the file with credentials from the given profile
 func DecryptSecrets(file, profile string) (Secrets, error) {
@@ -20,7 +20,7 @@ func DecryptSecrets(file, profile string) (Secrets, error) {
 	sopsOutput, sopsError := decrypt.File(file, "Dotenv")
 
 	// TODO check error
-	secrets := make(Secrets)
+	var secrets Secrets
 	// sops output is key=value\n so first split on new line
 	sopsLines := strings.Split(string(sopsOutput), "\n")
 
@@ -28,7 +28,7 @@ func DecryptSecrets(file, profile string) (Secrets, error) {
 		// split on =
 		if len(sopLine) > 0 {
 			sopsPair := strings.Split(sopLine, "=")
-			secrets[sopsPair[0]] = sopsPair[1]
+			secrets = append(secrets, sopsPair)
 		}
 	}
 
