@@ -34,12 +34,14 @@ func EnsureVaultSession(config Config) {
 	}
 }
 
-type awsCredentials struct {
+// AwsCredentials holds access keys and session token
+type AwsCredentials struct {
 	AccessKeyID                               string `json:"AccessKeyId"`
 	SecretAccessKey, SessionToken, Expiration string
 }
 
-func getProfileCredentials(profile string) awsCredentials {
+// GetProfileCredentials returns AwsCredentials for the given profile
+func GetProfileCredentials(profile string) AwsCredentials {
 	execOut, execErr := exec.Command("aws-vault", "exec", "--json", profile).Output()
 
 	if execErr != nil {
@@ -47,14 +49,15 @@ func getProfileCredentials(profile string) awsCredentials {
 		os.Exit(1)
 	}
 	// TODO: cache credentials until expired
-	var credentials awsCredentials
+	var credentials AwsCredentials
 	json.Unmarshal(execOut, &credentials)
+
 	return credentials
 }
 
 // GetSession returns aws session with credentials from profile
 func GetSession(profile string) *session.Session {
-	creds := getProfileCredentials(profile)
+	creds := GetProfileCredentials(profile)
 	config := aws.NewConfig().WithCredentials(credentials.NewStaticCredentials(creds.AccessKeyID, creds.SecretAccessKey, creds.SessionToken))
 	sess, _ := session.NewSession(config)
 	return sess

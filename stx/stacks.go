@@ -7,7 +7,7 @@ import (
 )
 
 // Stack represents an individual stack
-type Stack struct{ Profile, Region, Environment, RegionCode string }
+type Stack struct{ Profile, SopsProfile, Region, Environment, RegionCode string }
 
 // Stacks represents the Go equivalent of the Cue Stacks pattern
 // it allows stacks to be indexed via for range
