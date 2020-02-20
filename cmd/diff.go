@@ -44,7 +44,7 @@ var diffCmd = &cobra.Command{
 					describeStacksOutput, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)
 
 					if describeStacksErr != nil {
-						fmt.Printf("DESC STAX:\n%+v %+v", describeStacksOutput, describeStacksErr)
+						fmt.Printf("DESC STAX:\n%+v %+v", describeStacksOutput, au.Red(describeStacksErr))
 						continue
 					}
 
