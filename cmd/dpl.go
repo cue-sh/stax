@@ -120,7 +120,7 @@ var dplCmd = &cobra.Command{
 						fmt.Printf("%+v %+v", createChangeSetOutput, createChangeSetErr)
 						os.Exit(1)
 					}
-					fmt.Printf("%s\n", au.Green("✓"))
+
 					describeChangesetInput := cloudformation.DescribeChangeSetInput{
 						ChangeSetName: &changeSetName,
 						StackName:     &stackName,
@@ -128,6 +128,7 @@ var dplCmd = &cobra.Command{
 
 					cfn.WaitUntilChangeSetCreateComplete(&describeChangesetInput)
 					// s.Stop()
+					fmt.Printf("%s\n", au.Green("✓"))
 					describeChangesetOuput, describeChangesetErr := cfn.DescribeChangeSet(&describeChangesetInput)
 					if describeChangesetErr != nil {
 						fmt.Printf("%+v", au.Red(describeChangesetErr))
