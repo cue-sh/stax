@@ -90,7 +90,11 @@ var dplCmd = &cobra.Command{
 					secretsPath := filepath.Clean(buildInstance.DisplayPath + "/secrets.env")
 					if _, err := os.Stat(secretsPath); !os.IsNotExist(err) {
 						fmt.Print(au.Gray(11, "  Decrypting secrets..."))
-						secrets := stx.DecryptSecrets(secretsPath, config.Sops.Profile)
+						profile := stack.Profile
+						if config.Sops.Profile != "" {
+							profile = config.Sops.Profile
+						}
+						secrets := stx.DecryptSecrets(secretsPath, profile)
 						// TODO check error
 						// sops output is key=value\n so first split on new line
 						var parameters []*cloudformation.Parameter
