@@ -105,7 +105,7 @@ var dplCmd = &cobra.Command{
 							parameters = append(parameters, &cloudformation.Parameter{ParameterKey: &secrets[i][0], ParameterValue: &secrets[i][1]})
 						}
 						createChangeSetInput.SetParameters(parameters)
-						fmt.Printf("%+v\n", createChangeSetInput)
+
 						fmt.Printf("%s\n", au.Green("✓"))
 					}
 					fmt.Print(au.Gray(11, "  Creating changeset..."))
