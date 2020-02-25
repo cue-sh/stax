@@ -36,11 +36,15 @@ var printCmd = &cobra.Command{
 
 			for stackName := range stacks {
 				var path []string
+				var displayPath string
 				if printPath != "" {
 					path = []string{"Stacks", stackName}
 					path = append(path, strings.Split(printPath, ":")...)
 					valueToMarshal = cueValue.Lookup(path...)
-					printPath = strings.Join(path, ":") + ":\n"
+					if valueToMarshal.Err() != nil {
+						continue
+					}
+					displayPath = strings.Join(path, ":") + ":\n"
 				}
 				yml, ymlErr := yaml.Marshal(valueToMarshal)
 
@@ -53,7 +57,7 @@ var printCmd = &cobra.Command{
 				} else {
 					if !printOnlyErrors {
 						fmt.Println(au.Cyan(buildInstance.DisplayPath))
-						fmt.Printf("%s\n", printPath+string(yml))
+						fmt.Printf("%s\n", displayPath+string(yml))
 					}
 				}
 			}
