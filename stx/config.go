@@ -15,7 +15,7 @@ import (
 
 const configCue = `package stx
 Auth: Ykman: Profile: string | *""
-Xpt: YmlPath: string | *"./yml"
+Export: YmlPath: string | *"./yml"
 `
 
 // Config holds config values parsed from config.stx.cue files
@@ -27,7 +27,7 @@ type Config struct {
 			Profile string
 		}
 	}
-	Xpt struct {
+	Export struct {
 		YmlPath string
 	}
 }
