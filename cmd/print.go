@@ -39,12 +39,12 @@ var printCmd = &cobra.Command{
 				var displayPath string
 				if printPath != "" {
 					path = []string{"Stacks", stackName}
-					path = append(path, strings.Split(printPath, ":")...)
+					path = append(path, strings.Split(printPath, ".")...)
 					valueToMarshal = cueValue.Lookup(path...)
 					if valueToMarshal.Err() != nil {
 						continue
 					}
-					displayPath = strings.Join(path, ":") + ":\n"
+					displayPath = strings.Join(path, ".") + ":\n"
 				}
 				yml, ymlErr := yaml.Marshal(valueToMarshal)
 
@@ -75,6 +75,6 @@ func init() {
 
 	printCmd.Flags().BoolVar(&printOnlyErrors, "only-errors", false, "Only print errors. Cannot be used in concjunction with --hide-errors")
 	printCmd.Flags().BoolVar(&printHideErrors, "hide-errors", false, "Hide errors. Cannot be used in concjunction with --only-errors")
-	printCmd.Flags().StringVarP(&printPath, "path", "p", "", "Dot-notation style path to key to print. Eg: Template.Resources.Alb")
+	printCmd.Flags().StringVarP(&printPath, "path", "p", "", "Dot-notation style path to key to print. Eg: Template.Resources.Alb or Template.Outputs")
 
 }
