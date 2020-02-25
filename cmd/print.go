@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/TangoGroup/stx/stx"
 
@@ -13,6 +14,7 @@ import (
 )
 
 var printOnlyErrors, printHideErrors bool
+var printPath string
 
 // printCmd represents the print command
 var printCmd = &cobra.Command{
@@ -29,21 +31,32 @@ var printCmd = &cobra.Command{
 		buildInstances := stx.GetBuildInstances(args, "cfn")
 		stx.Process(buildInstances, flags.exclude, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 
-			yml, ymlErr := yaml.Marshal(cueValue)
+			valueToMarshal := cueValue
+			stacks := stx.GetStacks(cueValue)
 
-			if ymlErr != nil {
-				totalErrors++
-				if !printHideErrors {
-					fmt.Println(au.Cyan(buildInstance.DisplayPath))
-					fmt.Println(au.Red(ymlErr.Error()))
+			for stackName := range stacks {
+				var path []string
+				if printPath != "" {
+					path = []string{"Stacks", stackName}
+					path = append(path, strings.Split(printPath, ":")...)
+					valueToMarshal = cueValue.Lookup(path...)
+					printPath = strings.Join(path, ":") + ":\n"
 				}
-			} else {
-				if !printOnlyErrors {
-					fmt.Println(au.Cyan(buildInstance.DisplayPath))
-					fmt.Printf("%s\n", string(yml))
+				yml, ymlErr := yaml.Marshal(valueToMarshal)
+
+				if ymlErr != nil {
+					totalErrors++
+					if !printHideErrors {
+						fmt.Println(au.Cyan(buildInstance.DisplayPath))
+						fmt.Println(au.Red(ymlErr.Error()))
+					}
+				} else {
+					if !printOnlyErrors {
+						fmt.Println(au.Cyan(buildInstance.DisplayPath))
+						fmt.Printf("%s\n", printPath+string(yml))
+					}
 				}
 			}
-
 		})
 
 		if !printHideErrors && totalErrors > 0 {
@@ -58,4 +71,6 @@ func init() {
 
 	printCmd.Flags().BoolVar(&printOnlyErrors, "only-errors", false, "Only print errors. Cannot be used in concjunction with --hide-errors")
 	printCmd.Flags().BoolVar(&printHideErrors, "hide-errors", false, "Hide errors. Cannot be used in concjunction with --only-errors")
+	printCmd.Flags().StringVarP(&printPath, "path", "p", "", "Dot-notation style path to key to print. Eg: Template.Resources.Alb")
+
 }
