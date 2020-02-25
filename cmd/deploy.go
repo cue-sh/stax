@@ -18,10 +18,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// dplCmd represents the dpl command
-var dplCmd = &cobra.Command{
-	Use:   "dpl",
-	Short: "DePLoys a stack by creating a changeset and previews expected changes.",
+// deployCmd represents the deploy command
+var deployCmd = &cobra.Command{
+	Use:   "deploy",
+	Short: "Deploys a stack by creating a changeset, previews expected changes, and optionally executes.",
 	Long:  `Yada yada yada.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		stx.EnsureVaultSession(config)
@@ -180,5 +180,5 @@ var dplCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(dplCmd)
+	rootCmd.AddCommand(deployCmd)
 }
