@@ -13,10 +13,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// xptCmd represents the xpt command
-var xptCmd = &cobra.Command{
-	Use:   "xpt",
-	Short: "eXPorTs cue templates that implement the Stacks:[] pattern.",
+// exportCmd represents the export command
+var exportCmd = &cobra.Command{
+	Use:   "export",
+	Short: "Exports cue templates that implement the Stack pattern as yml files.",
 	Long:  `Yada yada yada.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		buildInstances := stx.GetBuildInstances(args, "cfn")
@@ -32,7 +32,7 @@ var xptCmd = &cobra.Command{
 }
 
 func saveStackAsYml(stackName string, stack stx.Stack, buildInstance *build.Instance, cueValue cue.Value) string {
-	dir := filepath.Clean(config.CueRoot + "/" + config.Xpt.YmlPath + "/" + stack.Profile)
+	dir := filepath.Clean(config.CueRoot + "/" + config.Export.YmlPath + "/" + stack.Profile)
 	os.MkdirAll(dir, 0766)
 	//fmt.Println(err)
 	fileName := dir + "/" + stackName + ".cfn.yml"
@@ -45,5 +45,5 @@ func saveStackAsYml(stackName string, stack stx.Stack, buildInstance *build.Inst
 }
 
 func init() {
-	rootCmd.AddCommand(xptCmd)
+	rootCmd.AddCommand(exportCmd)
 }
