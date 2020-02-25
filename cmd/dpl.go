@@ -152,21 +152,27 @@ var dplCmd = &cobra.Command{
 							fmt.Printf("%+v\n", au.Red("Error getting template for stack: "+stackName))
 							continue
 						} else {
-							existingDoc, _ := ytbx.LoadDocuments([]byte(*existingTemplate.TemplateBody))
-							doc, _ := ytbx.LoadDocuments([]byte(templateBody))
-							report, err := dyff.CompareInputFiles(
-								ytbx.InputFile{Documents: existingDoc},
-								ytbx.InputFile{Documents: doc},
-							)
-							if err != nil {
-								fmt.Printf("%+v\n", au.Red("Error creating template diff for stack: "+stackName))
+							r, _ := regexp.Compile("!(Base64|Cidr|FindInMap|GetAtt|GetAZs|ImportValue|Join|Select|Split|Sub|Transform|Ref|And|Equals|If|Not|Or)")
+							if r.MatchString(*existingTemplate.TemplateBody) {
+								fmt.Printf("%+v\n", au.Red("The existing stack uses short intrinsic functions, unable to create diff: "+stackName))
 								continue
 							} else {
-								reportWriter := &dyff.HumanReport{
-									Report:     report,
-									ShowBanner: false,
+								existingDoc, _ := ytbx.LoadDocuments([]byte(*existingTemplate.TemplateBody))
+								doc, _ := ytbx.LoadDocuments([]byte(templateBody))
+								report, err := dyff.CompareInputFiles(
+									ytbx.InputFile{Documents: existingDoc},
+									ytbx.InputFile{Documents: doc},
+								)
+								if err != nil {
+									fmt.Printf("%+v\n", au.Red("Error creating template diff for stack: "+stackName))
+									continue
+								} else {
+									reportWriter := &dyff.HumanReport{
+										Report:     report,
+										ShowBanner: false,
+									}
+									reportWriter.WriteReport(os.Stdout)
 								}
-								reportWriter.WriteReport(os.Stdout)
 							}
 						}
 					} else {
