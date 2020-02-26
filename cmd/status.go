@@ -19,10 +19,6 @@ var statusCmd = &cobra.Command{
 	Long:  `How long...?`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		//if stackName == "" {
-		//	fmt.Println(au.Red("Please provide a stack name."))
-		//	os.Exit(1)
-		//}
 		stx.EnsureVaultSession(config)
 		buildInstances := stx.GetBuildInstances(args, "cfn")
 		stx.Process(buildInstances, flags, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
