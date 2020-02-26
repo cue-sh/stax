@@ -34,28 +34,27 @@ func GetBuildInstances(args []string, pkg string) []*build.Instance {
 	// load finds files based on args and passes those to build
 	// buildInstances is a list of build.Instances, each has been parsed
 	buildInstances := load.Instances(args, &config)
+
 	return buildInstances
 }
 
-// Process iterates over instances applying the handler function for each
-func Process(buildInstances []*build.Instance, exclude string, handler instanceHandler) {
+// Process iterates over instances, filters based on flags, and applies the handler function for each
+func Process(buildInstances []*build.Instance, flags Flags, handler instanceHandler) {
 
 	var excludeRegexp *regexp.Regexp
 	var excludeRegexpErr error
+	au := aurora.NewAurora(true) // TODO move to logger
 
-	if exclude != "" {
-		excludeRegexp, excludeRegexpErr = regexp.Compile(exclude)
+	if flags.Exclude != "" {
+		excludeRegexp, excludeRegexpErr = regexp.Compile(flags.Exclude)
 		if excludeRegexpErr != nil {
-			au := aurora.NewAurora(true) // TODO move to logger
 			fmt.Println(au.Red(excludeRegexpErr.Error()))
 		}
 	}
 
 	for _, buildInstance := range buildInstances {
-		if exclude != "" {
-			if excludeRegexp.MatchString(buildInstance.DisplayPath) {
-				continue
-			}
+		if excludeRegexp != nil && excludeRegexp.MatchString(buildInstance.DisplayPath) {
+			continue
 		}
 		// A cue instance defines a single configuration based on a collection of underlying CUE files.
 		// cue.Build is designed to produce a single cue.Instance from n build.Instances
@@ -66,13 +65,9 @@ func Process(buildInstances []*build.Instance, exclude string, handler instanceH
 		cueInstance := cue.Build([]*build.Instance{buildInstance})[0]
 		if cueInstance.Err != nil {
 			// parse errors will be exposed here
-			fmt.Println(cueInstance.Err, cueInstance.Err.Position())
-		} else {
-
-			cueValue := cueInstance.Value()
-
-			handler(buildInstance, cueInstance, cueValue)
-
+			fmt.Println(au.Red(cueInstance.Err), cueInstance.Err.Position())
+			continue
 		}
+		handler(buildInstance, cueInstance, cueInstance.Value())
 	}
 }
