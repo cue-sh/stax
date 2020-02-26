@@ -13,6 +13,12 @@ import (
 	"github.com/logrusorgru/aurora"
 )
 
+// Flags holds flags passed in from cli
+type Flags struct {
+	Environment, Profile, RegionCode, Exclude, PrintPath string
+	PrintOnlyErrors, PrintHideErrors                     bool
+}
+
 const configCue = `package stx
 Auth: Ykman: Profile: string | *""
 Export: YmlPath: string | *"./yml"

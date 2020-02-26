@@ -10,8 +10,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var au aurora.Aurora  // TODO move au to Logger pacakge
-var config stx.Config // TODO refactor use of global vars
+var au aurora.Aurora // TODO move au to Logger pacakge
+// config and flgs should be the only global vars
+var config stx.Config // holds settings in config.stx.cue files
+var flags stx.Flags   // holds command line flags
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -30,23 +32,15 @@ func Execute() {
 	}
 }
 
-// Flags holds flags passed in from cli
-type Flags struct {
-	environment, regionCode, exclude string
-}
-
-// this should be the only global variable
-var flags Flags
-
 func init() {
 	cobra.OnInitialize()
 
-	flags = Flags{}
-	rootCmd.PersistentFlags().StringVarP(&flags.environment, "environment", "e", "", "Any environment listed in maps/Environments.cue")
-	rootCmd.PersistentFlags().StringVarP(&flags.regionCode, "region-code", "r", "", "Any region code listed in maps/RegionCodes.cue")
-	rootCmd.PersistentFlags().StringVarP(&flags.exclude, "exclude", "x", "", "Subdirectory paths matching this regular expression will be ignored.")
+	flags = stx.Flags{}
+	rootCmd.PersistentFlags().StringVarP(&flags.Environment, "environment", "e", "", "Includes only stacks with this environment.")
+	rootCmd.PersistentFlags().StringVar(&flags.Profile, "profile", "", "Includes only stacks with this profile")
+	rootCmd.PersistentFlags().StringVarP(&flags.RegionCode, "region-code", "r", "", "Includes only stacks with this region code")
+	rootCmd.PersistentFlags().StringVarP(&flags.Exclude, "exclude", "x", "", "Excludes subdirectory paths matching this regular expression.")
 
 	au = aurora.NewAurora(true)
 	config = stx.LoadConfig()
-
 }

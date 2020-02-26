@@ -10,24 +10,43 @@ import (
 type Stack struct{ Profile, SopsProfile, Region, Environment, RegionCode string }
 
 // Stacks represents the Go equivalent of the Cue Stacks pattern
-// it allows stacks to be indexed via for range
 type Stacks map[string]Stack
 
 // GetStacks returns the stacks as decoded from the cue instance value
-func GetStacks(cueValue cue.Value) Stacks {
-	// decoding into a struct allows Stacks to be indexed and used with for/range
+func GetStacks(cueValue cue.Value, flags Flags) Stacks {
+
 	var stacks Stacks
+
 	stacksCueValue := cueValue.Lookup("Stacks")
-	if stacksCueValue.Exists() {
+	if !stacksCueValue.Exists() {
+		return nil
+	}
 
-		decodeErr := stacksCueValue.Decode(&stacks)
+	decodeErr := stacksCueValue.Decode(&stacks)
+	if decodeErr != nil {
+		// evaluation errors (incomplete values, mismatched types, etc)
+		fmt.Println(decodeErr)
+		return nil
+	}
 
-		if decodeErr != nil {
-			// evaluation errors (incomplete values, mismatched types, etc)
-			fmt.Println(decodeErr)
-		} else if len(stacks) > 0 {
-			return stacks
+	if len(stacks) <= 0 {
+		return nil
+	}
+
+	// apply global flags here so individual commands dont have to
+	for stackName, stack := range stacks {
+		if flags.Environment != "" && stack.Environment != flags.Environment {
+			delete(stacks, stackName)
+		}
+
+		if flags.RegionCode != "" && stack.RegionCode != flags.RegionCode {
+			delete(stacks, stackName)
+		}
+
+		if flags.Profile != "" && stack.Profile != flags.Profile {
+			delete(stacks, stackName)
 		}
 	}
-	return nil
+
+	return stacks
 }
