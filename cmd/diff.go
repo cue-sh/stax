@@ -77,11 +77,13 @@ func diff(cfn *cloudformation.CloudFormation, stackName, templateBody string) {
 			if err != nil {
 				fmt.Printf("%+v\n", au.Red("Error creating template diff for stack: "+stackName))
 			} else {
-				reportWriter := &dyff.HumanReport{
-					Report:     report,
-					ShowBanner: false,
+				if len(report.Diffs) > 0 {
+					reportWriter := &dyff.HumanReport{
+						Report:     report,
+						ShowBanner: false,
+					}
+					reportWriter.WriteReport(os.Stdout)
 				}
-				reportWriter.WriteReport(os.Stdout)
 			}
 		}
 	}
