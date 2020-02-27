@@ -119,8 +119,6 @@ var deployCmd = &cobra.Command{
 							fmt.Print(au.Red(err))
 							continue
 						}
-						// TODO check error
-						// sops output is key=value\n so first split on new line
 
 						for key, value := range myEnv {
 							myKey := key
