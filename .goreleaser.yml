@@ -9,7 +9,7 @@ builds:
   goarch:
   - amd64
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "{{ .Tag }}-checksums.txt"
 snapshot:
   name_template: "{{ .Tag }}-next"
 changelog:
