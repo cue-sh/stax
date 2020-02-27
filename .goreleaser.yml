@@ -8,8 +8,8 @@ builds:
   - CGO_ENABLED=0
   goarch:
   - amd64
-checksum:
-  name_template: "{{ .Tag }}-checksums.txt"
+# checksum:
+#   name_template: "{{ .Tag }}-checksums.txt"
 snapshot:
   name_template: "{{ .Tag }}-next"
 changelog:
