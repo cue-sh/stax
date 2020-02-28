@@ -17,6 +17,12 @@ import (
 // EnsureVaultSession is used to prompt for MFA if aws-vault session has expired
 func EnsureVaultSession(config Config) {
 	au := aurora.NewAurora(true)
+	_, existingVault := os.LookupEnv("AWS_VAULT")
+	if existingVault {
+		fmt.Println(au.Red("Cannot run in nested aws-vault session!"))
+		os.Exit(1)
+	}
+
 	sessionsOut, sessionsErr := exec.Command("aws-vault", "list", "--sessions").Output()
 	if sessionsErr != nil {
 		fmt.Println(au.Red(sessionsErr))
@@ -39,7 +45,7 @@ func EnsureVaultSession(config Config) {
 		}
 		awsVaultExecErr := exec.Command("aws-vault", "exec", "-t", mfa, config.Auth.AwsVault.SourceProfile).Run()
 		if awsVaultExecErr != nil {
-			fmt.Println(au.Red(awsVaultExecErr))
+			fmt.Println(au.Red("aws-vault error: " + awsVaultExecErr.Error()))
 			os.Exit(1)
 		}
 	}
