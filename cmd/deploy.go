@@ -85,7 +85,7 @@ var deployCmd = &cobra.Command{
 					}
 					createChangeSetInput.ChangeSetType = &changeSetType
 
-					var parametersMap map[string]string
+					parametersMap := make(map[string]string)
 					// look for secrets file
 					secretsPath := filepath.Clean(buildInstance.DisplayPath + "/secrets.env")
 					if _, err := os.Stat(secretsPath); !os.IsNotExist(err) {
