@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/logrusorgru/aurora"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -14,21 +16,30 @@ import (
 
 // EnsureVaultSession is used to prompt for MFA if aws-vault session has expired
 func EnsureVaultSession(config Config) {
-	sessionsOut, _ := exec.Command("aws-vault", "list", "--sessions").Output()
+	au := aurora.NewAurora(true)
+	sessionsOut, sessionsErr := exec.Command("aws-vault", "list", "--sessions").Output()
+	if sessionsErr != nil {
+		fmt.Println(au.Red(sessionsErr))
+		os.Exit(1)
+	}
 	//fmt.Println(string(sessionsOut))
 	var mfa string
 	if len(sessionsOut) < 1 {
 		if len(config.Auth.Ykman.Profile) > 1 {
-			ykmanOutput, _ := exec.Command("ykman", "oath", "code", "-s", config.Auth.Ykman.Profile).Output()
+			ykmanOutput, ykmanErr := exec.Command("ykman", "oath", "code", "-s", config.Auth.Ykman.Profile).Output()
+			if ykmanErr != nil {
+				fmt.Println(au.Red(ykmanErr))
+				os.Exit(1)
+			}
 			mfa = strings.TrimSpace(string(ykmanOutput))
 			fmt.Println("Pulled MFA from ykman profile ", config.Auth.Ykman.Profile)
 		} else {
 			fmt.Print("MFA: ")
 			fmt.Scanln(&mfa)
 		}
-		err := exec.Command("aws-vault", "exec", "-t", mfa, "gloo-users").Run()
-		if err != nil {
-			fmt.Println(err)
+		awsVaultExecErr := exec.Command("aws-vault", "exec", "-t", mfa, config.Auth.AwsVault.SourceProfile).Run()
+		if awsVaultExecErr != nil {
+			fmt.Println(au.Red(awsVaultExecErr))
 			os.Exit(1)
 		}
 	}
@@ -42,10 +53,11 @@ type AwsCredentials struct {
 
 // GetProfileCredentials returns AwsCredentials for the given profile
 func GetProfileCredentials(profile string) AwsCredentials {
+	au := aurora.NewAurora(true)
 	execOut, execErr := exec.Command("aws-vault", "exec", "--json", profile).Output()
 
 	if execErr != nil {
-		fmt.Println(execErr)
+		fmt.Println(au.Red(execErr))
 		os.Exit(1)
 	}
 	// TODO: cache credentials until expired
