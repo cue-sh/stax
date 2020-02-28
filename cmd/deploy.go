@@ -85,8 +85,7 @@ var deployCmd = &cobra.Command{
 					}
 					createChangeSetInput.ChangeSetType = &changeSetType
 
-					var parameters []*cloudformation.Parameter
-
+					var parametersMap map[string]string
 					// look for secrets file
 					secretsPath := filepath.Clean(buildInstance.DisplayPath + "/secrets.env")
 					if _, err := os.Stat(secretsPath); !os.IsNotExist(err) {
@@ -98,12 +97,8 @@ var deployCmd = &cobra.Command{
 							fmt.Print(au.Red(secretsErr))
 							continue
 						}
-						// TODO check error
-						// sops output is key=value\n so first split on new line
-						var parameters []*cloudformation.Parameter
-
-						for i := range secrets {
-							parameters = append(parameters, &cloudformation.Parameter{ParameterKey: &secrets[i][0], ParameterValue: &secrets[i][1]})
+						for k, v := range secrets {
+							parametersMap[k] = v
 						}
 
 						fmt.Printf("%s\n", au.Green("✓"))
@@ -119,15 +114,21 @@ var deployCmd = &cobra.Command{
 							fmt.Print(au.Red(err))
 							continue
 						}
-
-						for key, value := range myEnv {
-							myKey := key
-							myValue := value
-							parameters = append(parameters, &cloudformation.Parameter{ParameterKey: &myKey, ParameterValue: &myValue})
+						for k, v := range myEnv {
+							parametersMap[k] = v
 						}
 
 						fmt.Printf("%s\n", au.Green("✓"))
 					}
+
+					var parameters []*cloudformation.Parameter
+
+					for paramKey, paramVal := range parametersMap {
+						myKey := paramKey
+						myValue := paramVal
+						parameters = append(parameters, &cloudformation.Parameter{ParameterKey: &myKey, ParameterValue: &myValue})
+					}
+
 					createChangeSetInput.SetParameters(parameters)
 					fmt.Print(au.Gray(11, "  Creating changeset..."))
 					// s := spinner.New(spinner.CharSets[14], 100*time.Millisecond) // Build our new spinner
