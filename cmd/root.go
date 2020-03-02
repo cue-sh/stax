@@ -40,6 +40,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&flags.Profile, "profile", "", "Includes only stacks with this profile")
 	rootCmd.PersistentFlags().StringVarP(&flags.RegionCode, "region-code", "r", "", "Includes only stacks with this region code")
 	rootCmd.PersistentFlags().StringVarP(&flags.Exclude, "exclude", "x", "", "Excludes subdirectory paths matching this regular expression.")
+	rootCmd.PersistentFlags().StringVarP(&flags.Include, "include", "n", "", "Includes subdirectory paths matching this regular expression.")
 
 	au = aurora.NewAurora(true)
 	config = stx.LoadConfig()

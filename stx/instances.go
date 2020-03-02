@@ -41,8 +41,8 @@ func GetBuildInstances(args []string, pkg string) []*build.Instance {
 // Process iterates over instances, filters based on flags, and applies the handler function for each
 func Process(buildInstances []*build.Instance, flags Flags, handler instanceHandler) {
 
-	var excludeRegexp *regexp.Regexp
-	var excludeRegexpErr error
+	var excludeRegexp, includeRegexp *regexp.Regexp
+	var excludeRegexpErr, includeRegexpErr error
 	au := aurora.NewAurora(true) // TODO move to logger
 
 	if flags.Exclude != "" {
@@ -52,8 +52,19 @@ func Process(buildInstances []*build.Instance, flags Flags, handler instanceHand
 		}
 	}
 
+	if flags.Include != "" {
+		includeRegexp, includeRegexpErr = regexp.Compile(flags.Include)
+		if includeRegexpErr != nil {
+			fmt.Println(au.Red(includeRegexpErr.Error()))
+		}
+	}
+
 	for _, buildInstance := range buildInstances {
 		if excludeRegexp != nil && excludeRegexp.MatchString(buildInstance.DisplayPath) {
+			continue
+		}
+
+		if includeRegexp != nil && !includeRegexp.MatchString(buildInstance.DisplayPath) {
 			continue
 		}
 		// A cue instance defines a single configuration based on a collection of underlying CUE files.
