@@ -25,7 +25,7 @@ func EnsureVaultSession(config Config) {
 
 	sessionsOut, sessionsErr := exec.Command("aws-vault", "list", "--sessions").Output()
 	if sessionsErr != nil {
-		fmt.Println(au.Red(sessionsErr))
+		fmt.Println("Could not list aws-vault sessions: " + au.Red(sessionsErr).String())
 		os.Exit(1)
 	}
 	//fmt.Println(string(sessionsOut))
