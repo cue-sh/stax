@@ -20,7 +20,10 @@ type Flags struct {
 }
 
 const configCue = `package stx
-Auth: Ykman: Profile: string | *""
+Auth: {
+	AwsVault: SourceProfile: string | *""
+	Ykman: Profile: string | *""
+}
 Export: YmlPath: string | *"./yml"
 `
 
@@ -29,6 +32,9 @@ type Config struct {
 	CueRoot     string
 	OsSeparator string
 	Auth        struct {
+		AwsVault struct {
+			SourceProfile string
+		}
 		Ykman struct {
 			Profile string
 		}
