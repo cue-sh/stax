@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
@@ -35,19 +36,26 @@ var statusCmd = &cobra.Command{
 				describeStacksInput := cloudformation.DescribeStacksInput{StackName: &stackName}
 				describeStacksOutput, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)
 				if describeStacksErr != nil {
-					fmt.Println(describeStacksErr)
-				}
-				status := describeStacksOutput.Stacks[0].StackStatus
-				table := tablewriter.NewWriter(os.Stdout)
-				table.SetAutoWrapText(false)
-				table.SetHeader([]string{"Stackname", "Status"})
-				table.SetHeaderColor(tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor})
-				if *status == "CREATE_COMPLETE" {
-					table.Append([]string{stackName, *status + "🤘"})
-				} else {
-					table.Append([]string{stackName, *status})
+					fmt.Println(au.Red(describeStacksErr))
+					continue
 				}
 
+				describedStack := describeStacksOutput.Stacks[0]
+				status := aws.StringValue(describedStack.StackStatus)
+
+				table := tablewriter.NewWriter(os.Stdout)
+				table.SetAutoWrapText(false)
+				table.SetHeader([]string{"Stackname", "Status", "Created", "Updated", "Reason"})
+				table.SetHeaderColor(tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor})
+
+				if strings.Contains(status, "COMPLETE") {
+					status = au.BrightGreen(status).String()
+				}
+
+				if strings.Contains(status, "FAIL") || strings.Contains(status, "ROLLBACK") {
+					status = au.Red(status).String()
+				}
+				table.Append([]string{au.Magenta(stackName).String(), status, describedStack.CreationTime.Local().String(), describedStack.LastUpdatedTime.Local().String(), aws.StringValue(describedStack.StackStatusReason)})
 				table.Render()
 			}
 		})
