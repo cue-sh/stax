@@ -2,12 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
 	"github.com/TangoGroup/stx/stx"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +28,6 @@ var statusCmd = &cobra.Command{
 			stacks := stx.GetStacks(cueValue, flags)
 
 			for stackName, stack := range stacks {
-				fmt.Println(stackName)
 				session := stx.GetSession(stack.Profile)
 				cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
 
@@ -35,8 +36,19 @@ var statusCmd = &cobra.Command{
 				describeStacksOutput, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)
 				if describeStacksErr != nil {
 					fmt.Println(describeStacksErr)
-					fmt.Println(describeStacksOutput)
 				}
+				status := describeStacksOutput.Stacks[0].StackStatus
+				table := tablewriter.NewWriter(os.Stdout)
+				table.SetAutoWrapText(false)
+				table.SetHeader([]string{"Stackname", "Status"})
+				table.SetHeaderColor(tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor})
+				if *status == "CREATE_COMPLETE" {
+					table.Append([]string{stackName, *status + "🤘"})
+				} else {
+					table.Append([]string{stackName, *status})
+				}
+
+				table.Render()
 			}
 		})
 	},
