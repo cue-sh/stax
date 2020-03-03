@@ -33,14 +33,14 @@ var exportCmd = &cobra.Command{
 
 func saveStackAsYml(stackName string, stack stx.Stack, buildInstance *build.Instance, cueValue cue.Value) string {
 	dir := filepath.Clean(config.CueRoot + "/" + config.Export.YmlPath + "/" + stack.Profile)
-	os.MkdirAll(dir, 0766)
+	os.MkdirAll(dir, 0755)
 	//fmt.Println(err)
 	fileName := dir + "/" + stackName + ".cfn.yml"
 	fmt.Printf("%s %s %s %s\n", au.White("Exported"), au.Magenta(stackName), au.White("⤏"), fileName)
 	template := cueValue.Lookup("Stacks", stackName, "Template")
 	yml, _ := yaml.Marshal(template)
 	//fmt.Printf("YAML: %+v\n", string(yml))
-	ioutil.WriteFile(fileName, yml, 0766)
+	ioutil.WriteFile(fileName, yml, 0644)
 	return fileName
 }
 
