@@ -130,6 +130,26 @@ var deployCmd = &cobra.Command{
 					}
 
 					createChangeSetInput.SetParameters(parameters)
+
+					// handle Stack.Tags
+					if len(stack.Tags) > 0 {
+						var tags []*cloudformation.Tag
+						for k, v := range stack.Tags {
+							tagK := k // reassign here to avoid issues with for-scope var
+							var tagV string
+							switch v {
+							default:
+								tagV = v
+							case "${STX::CuePath}":
+								tagV = strings.Replace(buildInstance.Dir, buildInstance.Root, "", 1)
+							case "${STX::CueFiles}":
+								tagV = strings.Join(buildInstance.CUEFiles, ", ")
+							}
+							tags = append(tags, &cloudformation.Tag{Key: &tagK, Value: &tagV})
+						}
+						createChangeSetInput.SetTags(tags)
+					}
+
 					fmt.Print(au.Gray(11, "  Creating changeset..."))
 					// s := spinner.New(spinner.CharSets[14], 100*time.Millisecond) // Build our new spinner
 					// s.Color("green")
