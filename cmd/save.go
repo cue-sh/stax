@@ -38,6 +38,11 @@ var saveCmd = &cobra.Command{
 						continue
 					}
 
+					if len(describeStacksOutput.Stacks[0].Outputs) < 1 {
+						fmt.Printf("%s %s %s\n", au.White("Skipped"), au.Magenta(stackName), "with no outputs.")
+						continue
+					}
+
 					// cfn.out files are store under cue.mod/usr/cfn.out with the same relative path as the stacks cue instance
 					// for example a stack with a template declared in cue/engineering/eks/cluster
 					// with a concrete leaf in cue/engineering/eks/cluster/dev-usw2
@@ -67,15 +72,18 @@ var saveCmd = &cobra.Command{
 					result := "package " + cuePackage + "\n\n\"" + stackName + "\": {\n"
 					// convert cloudformation outputs into simple key:value pairs
 					for _, output := range describeStacksOutput.Stacks[0].Outputs {
-						result += fmt.Sprintf("\"%s\":\"%s\"\n", *output.OutputKey, *output.OutputValue)
+						result += fmt.Sprintf("\"%s\":\"%s\"\n", aws.StringValue(output.OutputKey), aws.StringValue(output.OutputValue))
 					}
 					result += "}\n"
+
 					// use cue to format the output
 					cueOutput, cueOutputErr := format.Source([]byte(result))
 					if cueOutputErr != nil {
 						fmt.Println(au.Red(cueOutputErr))
 						continue
 					}
+
+					// save it!
 					os.MkdirAll(cueOutPath, 0766)
 					fileName := cueOutPath + "/" + stackName + ".out.cue"
 					ioutil.WriteFile(fileName, cueOutput, 0766)
