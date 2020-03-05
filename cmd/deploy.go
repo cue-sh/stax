@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"crypto/sha1"
 	"fmt"
 	"io/ioutil"
@@ -9,11 +10,13 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
 	"github.com/TangoGroup/stx/stx"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
@@ -168,7 +171,7 @@ var deployCmd = &cobra.Command{
 						StackName:     &stackName,
 					}
 
-					cfn.WaitUntilChangeSetCreateComplete(&describeChangesetInput)
+					cfn.WaitUntilChangeSetCreateCompleteWithContext(context.Background(), &describeChangesetInput, request.WithWaiterDelay(request.ConstantWaiterDelay(5*time.Second)))
 					// s.Stop()
 					fmt.Printf("%s\n", au.Green("✓"))
 					describeChangesetOuput, describeChangesetErr := cfn.DescribeChangeSet(&describeChangesetInput)
