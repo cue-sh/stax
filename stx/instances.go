@@ -1,7 +1,6 @@
 package stx
 
 import (
-	"fmt"
 	"regexp"
 
 	"cuelang.org/go/cue"
@@ -9,7 +8,7 @@ import (
 	"cuelang.org/go/cue/build"
 	"cuelang.org/go/cue/load"
 	"cuelang.org/go/cue/parser"
-	"github.com/logrusorgru/aurora"
+	"github.com/TangoGroup/stx/logger"
 )
 
 type instanceHandler func(*build.Instance, *cue.Instance, cue.Value)
@@ -41,21 +40,22 @@ func GetBuildInstances(args []string, pkg string) []*build.Instance {
 // Process iterates over instances, filters based on flags, and applies the handler function for each
 func Process(buildInstances []*build.Instance, flags Flags, handler instanceHandler) {
 
+	log := logger.NewLogger(flags.Debug, flags.NoColor).WithPrefix("Process: ")
+
 	var excludeRegexp, includeRegexp *regexp.Regexp
 	var excludeRegexpErr, includeRegexpErr error
-	au := aurora.NewAurora(true) // TODO move to logger
 
 	if flags.Exclude != "" {
 		excludeRegexp, excludeRegexpErr = regexp.Compile(flags.Exclude)
 		if excludeRegexpErr != nil {
-			fmt.Println(au.Red(excludeRegexpErr.Error()))
+			log.Error(excludeRegexpErr.Error())
 		}
 	}
 
 	if flags.Include != "" {
 		includeRegexp, includeRegexpErr = regexp.Compile(flags.Include)
 		if includeRegexpErr != nil {
-			fmt.Println(au.Red(includeRegexpErr.Error()))
+			log.Error(includeRegexpErr.Error())
 		}
 	}
 
@@ -76,7 +76,7 @@ func Process(buildInstances []*build.Instance, flags Flags, handler instanceHand
 		cueInstance := cue.Build([]*build.Instance{buildInstance})[0]
 		if cueInstance.Err != nil {
 			// parse errors will be exposed here
-			fmt.Println(au.Red(cueInstance.Err), cueInstance.Err.Position())
+			log.Error(cueInstance.Err, cueInstance.Err.Position())
 			continue
 		}
 		handler(buildInstance, cueInstance, cueInstance.Value())

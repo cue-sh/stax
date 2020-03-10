@@ -1,10 +1,9 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
 	"strings"
 
+	"github.com/TangoGroup/stx/logger"
 	"github.com/TangoGroup/stx/stx"
 
 	"cuelang.org/go/cue"
@@ -19,10 +18,9 @@ var printCmd = &cobra.Command{
 	Short: "Prints the Cue output as YAML",
 	Long:  `yada yada yada`,
 	Run: func(cmd *cobra.Command, args []string) {
-
+		log := logger.NewLogger(flags.Debug, flags.NoColor)
 		if flags.PrintOnlyErrors && flags.PrintHideErrors {
-			fmt.Println(au.Red("Cannot show only errors while hiding them."))
-			os.Exit(1)
+			log.Fatal("Cannot show only errors while hiding them.")
 		}
 		totalErrors := 0
 		buildInstances := stx.GetBuildInstances(args, "cfn")
@@ -48,27 +46,26 @@ var printCmd = &cobra.Command{
 				if ymlErr != nil {
 					totalErrors++
 					if !flags.PrintHideErrors {
-						fmt.Println(au.Cyan(buildInstance.DisplayPath))
-						fmt.Println(au.Red(ymlErr.Error()))
+						log.Info(au.Cyan(buildInstance.DisplayPath))
+						log.Error(ymlErr.Error())
 					}
 				} else {
 					if !flags.PrintOnlyErrors {
-						fmt.Println(au.Cyan(buildInstance.DisplayPath))
-						fmt.Printf("%s\n", displayPath+string(yml))
+						log.Info(au.Cyan(buildInstance.DisplayPath))
+						log.InfoF("%s\n", displayPath+string(yml))
 					}
 				}
 			}
 		})
 
 		if !flags.PrintHideErrors && totalErrors > 0 {
-			fmt.Println("Total errors: ", totalErrors)
+			log.Fatal("Total errors: ", totalErrors)
 		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(printCmd)
-	// TODO add flag to skip/hide errors
 
 	printCmd.Flags().BoolVar(&flags.PrintOnlyErrors, "only-errors", false, "Only print errors. Cannot be used in concjunction with --hide-errors")
 	printCmd.Flags().BoolVar(&flags.PrintHideErrors, "hide-errors", false, "Hide errors. Cannot be used in concjunction with --only-errors")
