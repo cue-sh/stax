@@ -30,7 +30,7 @@ var eventsCmd = &cobra.Command{
 				log.Error(stacksErr)
 			}
 
-			if stacks != nil {
+			if stacks == nil {
 				return
 			}
 
