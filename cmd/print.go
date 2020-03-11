@@ -32,7 +32,7 @@ var printCmd = &cobra.Command{
 			valueToMarshal := cueValue
 			log.Debug("Getting stacks...")
 			stacks, stacksErr := stx.GetStacks(cueValue, flags)
-			if stacksErr != nil {
+			if stacksErr != nil && !flags.PrintHideErrors {
 				log.Error(stacksErr)
 			}
 
