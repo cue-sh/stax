@@ -14,6 +14,7 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
+	"github.com/TangoGroup/stx/logger"
 	"github.com/TangoGroup/stx/stx"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -28,18 +29,17 @@ var deployCmd = &cobra.Command{
 	Short: "Deploys a stack by creating a changeset, previews expected changes, and optionally executes.",
 	Long:  `Yada yada yada.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		log := logger.NewLogger(flags.Debug, flags.NoColor)
 		stx.EnsureVaultSession(config)
 		buildInstances := stx.GetBuildInstances(args, "cfn")
 		stx.Process(buildInstances, flags, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 			stacks := stx.GetStacks(cueValue, flags)
 			if stacks != nil {
-				//fmt.Printf("%+v\n\n", top)
-
 				for stackName, stack := range stacks {
 
 					fileName := saveStackAsYml(stackName, stack, buildInstance, cueValue)
-					fmt.Printf("%s %s %s %s:%s\n", au.White("Deploying"), au.Magenta(stackName), au.White("⤏"), au.Green(stack.Profile), au.Cyan(stack.Region))
-					fmt.Print(au.Gray(11, "  Validating template..."))
+					log.Infof("%s %s %s %s:%s\n", au.White("Deploying"), au.Magenta(stackName), au.White("⤏"), au.Green(stack.Profile), au.Cyan(stack.Region))
+					log.Info(au.Gray(11, "  Validating template..."))
 
 					// get a session and cloudformation service client
 					session := stx.GetSession(stack.Profile)
@@ -59,15 +59,13 @@ var deployCmd = &cobra.Command{
 
 					// template failed to validate
 					if validateTemplateErr != nil {
-						fmt.Printf(" %s\n", au.Red("✕"))
-						fmt.Printf("%+v\n", validateTemplateErr)
-						// os.Exit(1)
-						continue
+						log.Infof(" %s\n", au.Red("✕"))
+						log.Fatalf("%+v\n", validateTemplateErr)
 					}
 
 					// template must have validated
-					fmt.Printf("%s\n", au.BrightGreen("✓"))
-					//fmt.Printf("%+v\n", validateTemplateOutput.String())
+					log.Infof("%s\n", au.BrightGreen("✓"))
+					//log.Infof("%+v\n", validateTemplateOutput.String())
 
 					// look to see if stack exists
 					describeStacksInput := cloudformation.DescribeStacksInput{StackName: &stackName}
@@ -84,7 +82,6 @@ var deployCmd = &cobra.Command{
 					// if stack does not exist set action to CREATE
 					if describeStacksErr != nil {
 						changeSetType = "CREATE" // if stack does not already exist
-						//fmt.Printf("DESC STAX:\n%+v %+v", describeStacksOutput, describeStacksErr)
 					}
 					createChangeSetInput.ChangeSetType = &changeSetType
 
@@ -92,36 +89,36 @@ var deployCmd = &cobra.Command{
 					// look for secrets file
 					secretsPath := filepath.Clean(buildInstance.DisplayPath + "/secrets.env")
 					if _, err := os.Stat(secretsPath); !os.IsNotExist(err) {
-						fmt.Print(au.Gray(11, "  Decrypting secrets..."))
+						log.Info(au.Gray(11, "  Decrypting secrets..."))
 
 						secrets, secretsErr := stx.DecryptSecrets(secretsPath, stack.SopsProfile)
 
 						if secretsErr != nil {
-							fmt.Print(au.Red(secretsErr))
+							log.Error(secretsErr)
 							continue
 						}
 						for k, v := range secrets {
 							parametersMap[k] = v
 						}
 
-						fmt.Printf("%s\n", au.Green("✓"))
+						log.Infof("%s\n", au.Green("✓"))
 					}
 
 					paramsPath := filepath.Clean(buildInstance.DisplayPath + "/params.env")
 					if _, err := os.Stat(paramsPath); !os.IsNotExist(err) {
-						fmt.Print(au.Gray(11, "  Loading params..."))
+						log.Info(au.Gray(11, "  Loading params..."))
 
 						myEnv, err := godotenv.Read(paramsPath)
 
 						if err != nil {
-							fmt.Print(au.Red(err))
+							log.Error(err)
 							continue
 						}
 						for k, v := range myEnv {
 							parametersMap[k] = v
 						}
 
-						fmt.Printf("%s\n", au.Green("✓"))
+						log.Infof("%s\n", au.Green("✓"))
 					}
 
 					var parameters []*cloudformation.Parameter
@@ -153,7 +150,7 @@ var deployCmd = &cobra.Command{
 						createChangeSetInput.SetTags(tags)
 					}
 
-					fmt.Print(au.Gray(11, "  Creating changeset..."))
+					log.Info(au.Gray(11, "  Creating changeset..."))
 					// s := spinner.New(spinner.CharSets[14], 100*time.Millisecond) // Build our new spinner
 					// s.Color("green")
 					// s.Start()
@@ -161,8 +158,7 @@ var deployCmd = &cobra.Command{
 					createChangeSetOutput, createChangeSetErr := cfn.CreateChangeSet(&createChangeSetInput)
 
 					if createChangeSetErr != nil {
-						//fmt.Printf("%+v %+v", describeStacksOutput, describeStacksErr)
-						fmt.Printf("%+v %+v", createChangeSetOutput, createChangeSetErr)
+						log.Infof("%+v %+v", createChangeSetOutput, createChangeSetErr)
 						os.Exit(1)
 					}
 
@@ -173,30 +169,27 @@ var deployCmd = &cobra.Command{
 
 					cfn.WaitUntilChangeSetCreateCompleteWithContext(context.Background(), &describeChangesetInput, request.WithWaiterDelay(request.ConstantWaiterDelay(5*time.Second)))
 					// s.Stop()
-					fmt.Printf("%s\n", au.Green("✓"))
+					log.Infof("%s\n", au.Green("✓"))
 					describeChangesetOuput, describeChangesetErr := cfn.DescribeChangeSet(&describeChangesetInput)
 					if describeChangesetErr != nil {
-						fmt.Printf("%+v", au.Red(describeChangesetErr))
-						// os.Exit(1)
-						continue
+						log.Fatalf("%+v", au.Red(describeChangesetErr))
 					}
 
-					if *describeChangesetOuput.ExecutionStatus != "AVAILABLE" || *describeChangesetOuput.Status != "CREATE_COMPLETE" {
-						fmt.Printf("%+v", describeChangesetOuput)
-						fmt.Println("No changes to deploy.")
-						// os.Exit(0)
+					if aws.StringValue(describeChangesetOuput.ExecutionStatus) != "AVAILABLE" || aws.StringValue(describeChangesetOuput.Status) != "CREATE_COMPLETE" {
+						log.Infof("%+v", describeChangesetOuput)
+						log.Info("No changes to deploy.")
 						continue
 					}
 
 					if len(describeChangesetOuput.Changes) > 0 {
-						fmt.Printf("%+v\n", describeChangesetOuput.Changes)
+						log.Infof("%+v\n", describeChangesetOuput.Changes)
 						diff(cfn, stackName, templateBody)
 					} else {
-						fmt.Println("No changes to resources.")
+						log.Info("No changes to resources.")
 						continue
 					}
 
-					fmt.Printf("%s %s\n▶︎", au.BrightBlue("Execute change set?"), "Y to execute. Anything else to cancel.")
+					log.Infof("%s %s\n▶︎", au.BrightBlue("Execute change set?"), "Y to execute. Anything else to cancel.")
 					var input string
 					fmt.Scanln(&input)
 
@@ -211,15 +204,14 @@ var deployCmd = &cobra.Command{
 						StackName:     &stackName,
 					}
 
+					log.Infof("%s %s %s %s:%s\n", au.White("Executing"), au.BrightBlue(changeSetName), au.White("⤏"), au.Magenta(stackName), au.Cyan(stack.Region))
+
 					_, executeChangeSetErr := cfn.ExecuteChangeSet(&executeChangeSetInput)
 
 					if executeChangeSetErr != nil {
-						fmt.Printf("%+v", au.Red(executeChangeSetErr))
-						// os.Exit(1)
-						continue
+						log.Fatal(executeChangeSetErr)
 					}
 
-					fmt.Printf("%s %s %s %s:%s\n", au.White("Executing"), au.BrightBlue(changeSetName), au.White("⤏"), au.Magenta(stackName), au.Cyan(stack.Region))
 				}
 			}
 		})
