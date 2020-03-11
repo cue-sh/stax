@@ -37,7 +37,7 @@ func (l *Logger) Debug(args ...interface{}) {
 // DebugF prints formatted text to stdout only if --debug is set
 func (l *Logger) DebugF(format string, args ...interface{}) {
 	if l.debug {
-		l.InfoF(format, args...)
+		l.Infof(format, args...)
 	}
 
 }
@@ -47,8 +47,8 @@ func (l *Logger) Info(args ...interface{}) {
 	l.stdout.Println(args...)
 }
 
-// InfoF prints formatted text to stdout
-func (l *Logger) InfoF(format string, args ...interface{}) {
+// Infof prints formatted text to stdout
+func (l *Logger) Infof(format string, args ...interface{}) {
 	l.stderr.Printf(format, args...)
 }
 
@@ -57,14 +57,20 @@ func (l *Logger) Error(args ...interface{}) {
 	l.stderr.Println(l.au.Red(fmt.Sprint(args...)))
 }
 
-// ErrorF prints to stderr
-func (l *Logger) ErrorF(format string, args ...interface{}) {
+// Errorf prints to stderr
+func (l *Logger) Errorf(format string, args ...interface{}) {
 	l.stderr.Print(l.au.Red(fmt.Sprintf(format, args...)))
 }
 
 // Fatal prints to stderr and exits 1
 func (l *Logger) Fatal(args ...interface{}) {
 	l.Error(args...)
+	os.Exit(1)
+}
+
+// Fatalf prints formatted output to stderr and exits 1
+func (l *Logger) Fatalf(format string, args ...interface{}) {
+	l.Errorf(format, args...)
 	os.Exit(1)
 }
 

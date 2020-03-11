@@ -52,7 +52,7 @@ var printCmd = &cobra.Command{
 				} else {
 					if !flags.PrintOnlyErrors {
 						log.Info(au.Cyan(buildInstance.DisplayPath))
-						log.InfoF("%s\n", displayPath+string(yml))
+						log.Infof("%s\n", displayPath+string(yml))
 					}
 				}
 			}
