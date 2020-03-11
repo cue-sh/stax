@@ -50,7 +50,7 @@ var deployCmd = &cobra.Command{
 					log.Error(saveErr)
 				}
 				log.Infof("%s %s %s %s:%s\n", au.White("Deploying"), au.Magenta(stackName), au.White("⤏"), au.Green(stack.Profile), au.Cyan(stack.Region))
-				log.Info(au.Gray(11, "  Validating template..."))
+				log.Infof("%s", au.Gray(11, "  Validating template..."))
 
 				// get a session and cloudformation service client
 				session := stx.GetSession(stack.Profile)
@@ -100,7 +100,7 @@ var deployCmd = &cobra.Command{
 				// look for secrets file
 				secretsPath := filepath.Clean(buildInstance.DisplayPath + "/secrets.env")
 				if _, err := os.Stat(secretsPath); !os.IsNotExist(err) {
-					log.Info(au.Gray(11, "  Decrypting secrets..."))
+					log.Infof("%s", au.Gray(11, "  Decrypting secrets..."))
 
 					secrets, secretsErr := stx.DecryptSecrets(secretsPath, stack.SopsProfile)
 
@@ -117,7 +117,7 @@ var deployCmd = &cobra.Command{
 
 				paramsPath := filepath.Clean(buildInstance.DisplayPath + "/params.env")
 				if _, err := os.Stat(paramsPath); !os.IsNotExist(err) {
-					log.Info(au.Gray(11, "  Loading params..."))
+					log.Infof("%s", au.Gray(11, "  Loading params..."))
 
 					myEnv, err := godotenv.Read(paramsPath)
 
@@ -161,16 +161,15 @@ var deployCmd = &cobra.Command{
 					createChangeSetInput.SetTags(tags)
 				}
 
-				log.Info(au.Gray(11, "  Creating changeset..."))
+				log.Infof("%s", au.Gray(11, "  Creating changeset..."))
 				// s := spinner.New(spinner.CharSets[14], 100*time.Millisecond) // Build our new spinner
 				// s.Color("green")
 				// s.Start()
 
-				createChangeSetOutput, createChangeSetErr := cfn.CreateChangeSet(&createChangeSetInput)
+				_, createChangeSetErr := cfn.CreateChangeSet(&createChangeSetInput)
 
 				if createChangeSetErr != nil {
-					log.Infof("%+v %+v", createChangeSetOutput, createChangeSetErr)
-					os.Exit(1)
+					log.Fatal(createChangeSetErr)
 				}
 
 				describeChangesetInput := cloudformation.DescribeChangeSetInput{
@@ -187,6 +186,7 @@ var deployCmd = &cobra.Command{
 				}
 
 				if aws.StringValue(describeChangesetOuput.ExecutionStatus) != "AVAILABLE" || aws.StringValue(describeChangesetOuput.Status) != "CREATE_COMPLETE" {
+					//TODO put describeChangesetOuput into table view
 					log.Infof("%+v", describeChangesetOuput)
 					log.Info("No changes to deploy.")
 					continue
