@@ -26,7 +26,14 @@ var statusCmd = &cobra.Command{
 		buildInstances := stx.GetBuildInstances(args, "cfn")
 		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 
-			stacks := stx.GetStacks(cueValue, flags)
+			stacks, stacksErr := stx.GetStacks(cueValue, flags)
+			if stacksErr != nil {
+				log.Error(stacksErr)
+			}
+
+			if stacks == nil {
+				return
+			}
 
 			for stackName, stack := range stacks {
 				session := stx.GetSession(stack.Profile)

@@ -28,35 +28,42 @@ var diffCmd = &cobra.Command{
 		buildInstances := stx.GetBuildInstances(args, "cfn")
 
 		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
-			stacks := stx.GetStacks(cueValue, flags)
-			if stacks != nil {
-				for stackName, stack := range stacks {
-					fileName, saveErr := saveStackAsYml(stackName, stack, buildInstance, cueValue)
-					if saveErr != nil {
-						log.Error(saveErr)
-					}
-
-					// get a session and cloudformation service client
-					session := stx.GetSession(stack.Profile)
-					cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
-
-					// read template from disk
-					templateFileBytes, _ := ioutil.ReadFile(fileName)
-					templateBody := string(templateFileBytes)
-
-					// look to see if stack exists
-					describeStacksInput := cloudformation.DescribeStacksInput{StackName: &stackName}
-					describeStacksOutput, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)
-
-					if describeStacksErr != nil {
-						log.Debugf("DESC STAX:\n%+v\n", describeStacksOutput)
-						log.Error(describeStacksErr)
-						continue
-					}
-
-					diff(cfn, stackName, templateBody)
-				}
+			stacks, stacksErr := stx.GetStacks(cueValue, flags)
+			if stacksErr != nil {
+				log.Error(stacksErr)
 			}
+
+			if stacks == nil {
+				return
+			}
+
+			for stackName, stack := range stacks {
+				fileName, saveErr := saveStackAsYml(stackName, stack, buildInstance, cueValue)
+				if saveErr != nil {
+					log.Error(saveErr)
+				}
+
+				// get a session and cloudformation service client
+				session := stx.GetSession(stack.Profile)
+				cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
+
+				// read template from disk
+				templateFileBytes, _ := ioutil.ReadFile(fileName)
+				templateBody := string(templateFileBytes)
+
+				// look to see if stack exists
+				describeStacksInput := cloudformation.DescribeStacksInput{StackName: &stackName}
+				describeStacksOutput, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)
+
+				if describeStacksErr != nil {
+					log.Debugf("DESC STAX:\n%+v\n", describeStacksOutput)
+					log.Error(describeStacksErr)
+					continue
+				}
+
+				diff(cfn, stackName, templateBody)
+			}
+
 		})
 	},
 }

@@ -25,62 +25,69 @@ var eventsCmd = &cobra.Command{
 		stx.EnsureVaultSession(config)
 		buildInstances := stx.GetBuildInstances(args, "cfn")
 		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
-			stacks := stx.GetStacks(cueValue, flags)
-			if stacks != nil {
-				for stackName, stack := range stacks {
-					// get a session and cloudformation service client
-					session := stx.GetSession(stack.Profile)
-					cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
-					sn := stackName // to avoid issues with pointing to a for-scoped var
-					describeStackEventsInput := cloudformation.DescribeStackEventsInput{StackName: &sn}
-					describeStackEventsOutput, describeStackEventsErr := cfn.DescribeStackEvents(&describeStackEventsInput)
-					if describeStackEventsErr != nil {
-						log.Error(describeStackEventsErr)
-						continue
-					}
-					// TODO add --aws-output(?) to be used in conjunction with --debug
-					// log.Debugf("%+v\n", describeStackEventsOutput)
-
-					numberStacksToDisplay, _ := cmd.Flags().GetInt("number")
-					if numberStacksToDisplay < 0 {
-						numberStacksToDisplay = len(describeStackEventsOutput.StackEvents)
-					}
-
-					table := tablewriter.NewWriter(os.Stdout)
-					table.SetAutoWrapText(false)
-					table.SetHeader([]string{"Resource", "Status", "Time", "Reason"})
-					table.SetHeaderColor(tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor})
-
-					for i, event := range describeStackEventsOutput.StackEvents {
-						if i >= numberStacksToDisplay {
-							break
-						}
-						reason := "-"
-						if event.ResourceStatusReason != nil {
-							reason = aws.StringValue(event.ResourceStatusReason)
-						}
-						status := aws.StringValue(event.ResourceStatus)
-						if strings.Contains(aws.StringValue(event.ResourceStatus), "COMPLETE") {
-							status = au.BrightGreen(aws.StringValue(event.ResourceStatus)).String()
-						}
-						// if strings.Contains(aws.StringValue(event.ResourceStatus), "PROGRESS") {
-						// 	status = au.Yellow(aws.StringValue(event.ResourceStatus)).String()
-						// }
-						if strings.Contains(aws.StringValue(event.ResourceStatus), "FAIL") || strings.Contains(aws.StringValue(event.ResourceStatus), "ROLLBACK") {
-							status = au.Red(aws.StringValue(event.ResourceStatus)).String()
-							reason = au.Red(reason).String()
-						}
-						resource := *event.LogicalResourceId
-						if strings.Contains(*event.LogicalResourceId, stackName) {
-							resource = au.Magenta(resource).String()
-						}
-
-						table.Append([]string{resource, status, event.Timestamp.Local().String(), reason})
-					}
-
-					table.Render()
-				}
+			stacks, stacksErr := stx.GetStacks(cueValue, flags)
+			if stacksErr != nil {
+				log.Error(stacksErr)
 			}
+
+			if stacks != nil {
+				return
+			}
+
+			for stackName, stack := range stacks {
+				// get a session and cloudformation service client
+				session := stx.GetSession(stack.Profile)
+				cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
+				sn := stackName // to avoid issues with pointing to a for-scoped var
+				describeStackEventsInput := cloudformation.DescribeStackEventsInput{StackName: &sn}
+				describeStackEventsOutput, describeStackEventsErr := cfn.DescribeStackEvents(&describeStackEventsInput)
+				if describeStackEventsErr != nil {
+					log.Error(describeStackEventsErr)
+					continue
+				}
+				// TODO add --aws-output(?) to be used in conjunction with --debug
+				// log.Debugf("%+v\n", describeStackEventsOutput)
+
+				numberStacksToDisplay, _ := cmd.Flags().GetInt("number")
+				if numberStacksToDisplay < 0 {
+					numberStacksToDisplay = len(describeStackEventsOutput.StackEvents)
+				}
+
+				table := tablewriter.NewWriter(os.Stdout)
+				table.SetAutoWrapText(false)
+				table.SetHeader([]string{"Resource", "Status", "Time", "Reason"})
+				table.SetHeaderColor(tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor})
+
+				for i, event := range describeStackEventsOutput.StackEvents {
+					if i >= numberStacksToDisplay {
+						break
+					}
+					reason := "-"
+					if event.ResourceStatusReason != nil {
+						reason = aws.StringValue(event.ResourceStatusReason)
+					}
+					status := aws.StringValue(event.ResourceStatus)
+					if strings.Contains(aws.StringValue(event.ResourceStatus), "COMPLETE") {
+						status = au.BrightGreen(aws.StringValue(event.ResourceStatus)).String()
+					}
+					// if strings.Contains(aws.StringValue(event.ResourceStatus), "PROGRESS") {
+					// 	status = au.Yellow(aws.StringValue(event.ResourceStatus)).String()
+					// }
+					if strings.Contains(aws.StringValue(event.ResourceStatus), "FAIL") || strings.Contains(aws.StringValue(event.ResourceStatus), "ROLLBACK") {
+						status = au.Red(aws.StringValue(event.ResourceStatus)).String()
+						reason = au.Red(reason).String()
+					}
+					resource := *event.LogicalResourceId
+					if strings.Contains(*event.LogicalResourceId, stackName) {
+						resource = au.Magenta(resource).String()
+					}
+
+					table.Append([]string{resource, status, event.Timestamp.Local().String(), reason})
+				}
+
+				table.Render()
+			}
+
 		})
 	},
 }

@@ -19,6 +19,7 @@ var printCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		defer log.Flush()
+
 		log.Debug("Print command running...")
 		if flags.PrintOnlyErrors && flags.PrintHideErrors {
 			log.Fatal("Cannot show only errors while hiding them.")
@@ -30,7 +31,14 @@ var printCmd = &cobra.Command{
 
 			valueToMarshal := cueValue
 			log.Debug("Getting stacks...")
-			stacks := stx.GetStacks(cueValue, flags)
+			stacks, stacksErr := stx.GetStacks(cueValue, flags)
+			if stacksErr != nil {
+				log.Error(stacksErr)
+			}
+
+			if stacks == nil {
+				return
+			}
 
 			for stackName := range stacks {
 				var path []string
@@ -39,17 +47,20 @@ var printCmd = &cobra.Command{
 					path = []string{"Stacks", stackName}
 					path = append(path, strings.Split(flags.PrintPath, ".")...)
 					valueToMarshal = cueValue.Lookup(path...)
-					if valueToMarshal.Err() != nil {
+					valueToMarshalErr := valueToMarshal.Err()
+					if valueToMarshalErr != nil {
+						// this just means the path didn't exist. not a real error
 						continue
 					}
 					displayPath = strings.Join(path, ".") + ":\n"
 				}
+
 				yml, ymlErr := yaml.Marshal(valueToMarshal)
 
 				if ymlErr != nil {
 					if !flags.PrintHideErrors {
 						log.Info(au.Cyan(buildInstance.DisplayPath))
-						log.Error(ymlErr.Error())
+						log.Error(ymlErr)
 					}
 				} else {
 					if !flags.PrintOnlyErrors {
