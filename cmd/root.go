@@ -39,9 +39,12 @@ func init() {
 	cobra.OnInitialize(func() {
 		au = aurora.NewAurora(!flags.NoColor)
 		log = logger.NewLogger(flags.Debug, flags.NoColor)
+
 		if config == nil {
+			log.Debug("Loading config...")
 			config = stx.LoadConfig(log)
 		}
+		log.Debug("Root command initialized.")
 	})
 
 	flags = stx.Flags{}

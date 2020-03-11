@@ -23,6 +23,7 @@ var saveCmd = &cobra.Command{
 	Long:  `Yada Yada Yada...`,
 	Run: func(cmd *cobra.Command, args []string) {
 		defer log.Flush()
+
 		stx.EnsureVaultSession(config)
 		buildInstances := stx.GetBuildInstances(args, "cfn")
 		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
@@ -35,12 +36,12 @@ var saveCmd = &cobra.Command{
 					describeStacksInput := cloudformation.DescribeStacksInput{StackName: &stackName}
 					describeStacksOutput, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)
 					if describeStacksErr != nil {
-						fmt.Println(au.Red(describeStacksErr))
+						log.Error(describeStacksErr)
 						continue
 					}
 
 					if len(describeStacksOutput.Stacks[0].Outputs) < 1 {
-						fmt.Printf("%s %s %s\n", au.White("Skipped"), au.Magenta(stackName), "with no outputs.")
+						log.Infof("%s %s %s\n", au.White("Skipped"), au.Magenta(stackName), "with no outputs.")
 						continue
 					}
 
@@ -80,15 +81,19 @@ var saveCmd = &cobra.Command{
 					// use cue to format the output
 					cueOutput, cueOutputErr := format.Source([]byte(result))
 					if cueOutputErr != nil {
-						fmt.Println(au.Red(cueOutputErr))
+						log.Error(cueOutputErr)
 						continue
 					}
 
 					// save it!
 					os.MkdirAll(cueOutPath, 0766)
 					fileName := cueOutPath + "/" + stackName + ".out.cue"
-					ioutil.WriteFile(fileName, cueOutput, 0766)
-					fmt.Printf("%s %s %s %s\n", au.White("Saved"), au.Magenta(stackName), au.White("⤏"), fileName)
+					writeErr := ioutil.WriteFile(fileName, cueOutput, 0766)
+					if writeErr != nil {
+						log.Error(writeErr)
+						continue
+					}
+					log.Infof("%s %s %s %s\n", au.White("Saved"), au.Magenta(stackName), au.White("⤏"), fileName)
 				}
 			}
 		})

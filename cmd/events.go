@@ -1,13 +1,11 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
-	"github.com/TangoGroup/stx/logger"
 	"github.com/TangoGroup/stx/stx"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -21,9 +19,9 @@ var eventsCmd = &cobra.Command{
 	Short: "Shows the latest events from the evaluated stacks.",
 	Long:  `Yaba daba doo.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		log := logger.NewLogger(flags.Debug, flags.NoColor)
-		defer log.Flush()
 
+		defer log.Flush()
+		// TODO add debug messages
 		stx.EnsureVaultSession(config)
 		buildInstances := stx.GetBuildInstances(args, "cfn")
 		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
@@ -37,10 +35,11 @@ var eventsCmd = &cobra.Command{
 					describeStackEventsInput := cloudformation.DescribeStackEventsInput{StackName: &sn}
 					describeStackEventsOutput, describeStackEventsErr := cfn.DescribeStackEvents(&describeStackEventsInput)
 					if describeStackEventsErr != nil {
-						fmt.Println(au.Red(describeStackEventsErr))
+						log.Error(describeStackEventsErr)
 						continue
 					}
-					// fmt.Printf("%+v\n", describeStackEventsOutput)
+					// TODO add --aws-output(?) to be used in conjunction with --debug
+					// log.Debugf("%+v\n", describeStackEventsOutput)
 
 					numberStacksToDisplay, _ := cmd.Flags().GetInt("number")
 					if numberStacksToDisplay < 0 {
@@ -58,17 +57,17 @@ var eventsCmd = &cobra.Command{
 						}
 						reason := "-"
 						if event.ResourceStatusReason != nil {
-							reason = *event.ResourceStatusReason
+							reason = aws.StringValue(event.ResourceStatusReason)
 						}
-						status := *event.ResourceStatus
-						if strings.Contains(*event.ResourceStatus, "COMPLETE") {
-							status = au.BrightGreen(*event.ResourceStatus).String()
+						status := aws.StringValue(event.ResourceStatus)
+						if strings.Contains(aws.StringValue(event.ResourceStatus), "COMPLETE") {
+							status = au.BrightGreen(aws.StringValue(event.ResourceStatus)).String()
 						}
-						// if strings.Contains(*event.ResourceStatus, "PROGRESS") {
-						// 	status = au.Yellow(*event.ResourceStatus).String()
+						// if strings.Contains(aws.StringValue(event.ResourceStatus), "PROGRESS") {
+						// 	status = au.Yellow(aws.StringValue(event.ResourceStatus)).String()
 						// }
-						if strings.Contains(*event.ResourceStatus, "FAIL") || strings.Contains(*event.ResourceStatus, "ROLLBACK") {
-							status = au.Red(*event.ResourceStatus).String()
+						if strings.Contains(aws.StringValue(event.ResourceStatus), "FAIL") || strings.Contains(aws.StringValue(event.ResourceStatus), "ROLLBACK") {
+							status = au.Red(aws.StringValue(event.ResourceStatus)).String()
 							reason = au.Red(reason).String()
 						}
 						resource := *event.LogicalResourceId

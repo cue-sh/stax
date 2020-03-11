@@ -38,7 +38,10 @@ var deployCmd = &cobra.Command{
 			if stacks != nil {
 				for stackName, stack := range stacks {
 
-					fileName := saveStackAsYml(stackName, stack, buildInstance, cueValue)
+					fileName, saveErr := saveStackAsYml(stackName, stack, buildInstance, cueValue)
+					if saveErr != nil {
+						log.Error(saveErr)
+					}
 					log.Infof("%s %s %s %s:%s\n", au.White("Deploying"), au.Magenta(stackName), au.White("⤏"), au.Green(stack.Profile), au.Cyan(stack.Region))
 					log.Info(au.Gray(11, "  Validating template..."))
 

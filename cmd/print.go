@@ -19,15 +19,17 @@ var printCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		defer log.Flush()
-
+		log.Debug("Print command running...")
 		if flags.PrintOnlyErrors && flags.PrintHideErrors {
 			log.Fatal("Cannot show only errors while hiding them.")
 		}
-
+		log.Debug("Getting build instances...")
 		buildInstances := stx.GetBuildInstances(args, "cfn")
+		log.Debug("Processing build instances...")
 		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 
 			valueToMarshal := cueValue
+			log.Debug("Getting stacks...")
 			stacks := stx.GetStacks(cueValue, flags)
 
 			for stackName := range stacks {

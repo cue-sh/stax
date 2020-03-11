@@ -44,6 +44,7 @@ func Process(buildInstances []*build.Instance, flags Flags, log *logger.Logger, 
 	var excludeRegexpErr, includeRegexpErr error
 
 	if flags.Exclude != "" {
+		log.Debug("Compiling --exclude regexp...")
 		excludeRegexp, excludeRegexpErr = regexp.Compile(flags.Exclude)
 		if excludeRegexpErr != nil {
 			log.Fatal(excludeRegexpErr)
@@ -51,18 +52,22 @@ func Process(buildInstances []*build.Instance, flags Flags, log *logger.Logger, 
 	}
 
 	if flags.Include != "" {
+		log.Debug("Compiling --include regexp...")
 		includeRegexp, includeRegexpErr = regexp.Compile(flags.Include)
 		if includeRegexpErr != nil {
 			log.Fatal(includeRegexpErr)
 		}
 	}
 
+	log.Debug("Iterating build instances...")
 	for _, buildInstance := range buildInstances {
 		if excludeRegexp != nil && excludeRegexp.MatchString(buildInstance.DisplayPath) {
+			log.Debug("Excluded via --exlude: ", buildInstance.DisplayPath)
 			continue
 		}
 
 		if includeRegexp != nil && !includeRegexp.MatchString(buildInstance.DisplayPath) {
+			log.Debug("NOT included via --include: ", buildInstance.DisplayPath)
 			continue
 		}
 		// A cue instance defines a single configuration based on a collection of underlying CUE files.
@@ -78,6 +83,8 @@ func Process(buildInstances []*build.Instance, flags Flags, log *logger.Logger, 
 			// TODO consider using log.Fatal and removing continue
 			continue
 		}
+
+		log.Debug("Executing handler...")
 		handler(buildInstance, cueInstance, cueInstance.Value())
 	}
 }
