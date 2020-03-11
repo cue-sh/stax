@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/TangoGroup/stx/logger"
 	"github.com/TangoGroup/stx/stx"
 	"github.com/logrusorgru/aurora"
 
@@ -13,6 +14,7 @@ import (
 var au aurora.Aurora   // console output color
 var config *stx.Config // holds settings in config.stx.cue files
 var flags stx.Flags    // holds command line flags
+var log *logger.Logger // commong log
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -36,8 +38,9 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(func() {
 		au = aurora.NewAurora(!flags.NoColor)
+		log = logger.NewLogger(flags.Debug, flags.NoColor)
 		if config == nil {
-			config = stx.LoadConfig(flags)
+			config = stx.LoadConfig(log)
 		}
 	})
 

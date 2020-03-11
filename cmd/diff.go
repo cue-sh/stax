@@ -22,9 +22,10 @@ var diffCmd = &cobra.Command{
 	Short: "DIFF against CloudFormation for the evaluted leaves.",
 	Long:  `Yada yada yada.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		defer log.Flush()
 		stx.EnsureVaultSession(config)
 		buildInstances := stx.GetBuildInstances(args, "cfn")
-		stx.Process(buildInstances, flags, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
+		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 			stacks := stx.GetStacks(cueValue, flags)
 			if stacks != nil {
 				//fmt.Printf("%+v\n\n", top)

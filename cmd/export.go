@@ -19,8 +19,11 @@ var exportCmd = &cobra.Command{
 	Short: "Exports cue templates that implement the Stack pattern as yml files.",
 	Long:  `Yada yada yada.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		defer log.Flush()
+
 		buildInstances := stx.GetBuildInstances(args, "cfn")
-		stx.Process(buildInstances, flags, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
+
+		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 			stacks := stx.GetStacks(cueValue, flags)
 			if stacks != nil {
 				for stackName, stack := range stacks {

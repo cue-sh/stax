@@ -3,7 +3,6 @@ package cmd
 import (
 	"strings"
 
-	"github.com/TangoGroup/stx/logger"
 	"github.com/TangoGroup/stx/stx"
 
 	"cuelang.org/go/cue"
@@ -18,13 +17,15 @@ var printCmd = &cobra.Command{
 	Short: "Prints the Cue output as YAML",
 	Long:  `yada yada yada`,
 	Run: func(cmd *cobra.Command, args []string) {
-		log := logger.NewLogger(flags.Debug, flags.NoColor)
+
+		defer log.Flush()
+
 		if flags.PrintOnlyErrors && flags.PrintHideErrors {
 			log.Fatal("Cannot show only errors while hiding them.")
 		}
-		totalErrors := 0
+
 		buildInstances := stx.GetBuildInstances(args, "cfn")
-		stx.Process(buildInstances, flags, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
+		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 
 			valueToMarshal := cueValue
 			stacks := stx.GetStacks(cueValue, flags)
@@ -44,7 +45,6 @@ var printCmd = &cobra.Command{
 				yml, ymlErr := yaml.Marshal(valueToMarshal)
 
 				if ymlErr != nil {
-					totalErrors++
 					if !flags.PrintHideErrors {
 						log.Info(au.Cyan(buildInstance.DisplayPath))
 						log.Error(ymlErr.Error())
@@ -57,10 +57,6 @@ var printCmd = &cobra.Command{
 				}
 			}
 		})
-
-		if !flags.PrintHideErrors && totalErrors > 0 {
-			log.Fatal("Total errors: ", totalErrors)
-		}
 	},
 }
 

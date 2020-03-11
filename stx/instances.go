@@ -38,9 +38,7 @@ func GetBuildInstances(args []string, pkg string) []*build.Instance {
 }
 
 // Process iterates over instances, filters based on flags, and applies the handler function for each
-func Process(buildInstances []*build.Instance, flags Flags, handler instanceHandler) {
-
-	log := logger.NewLogger(flags.Debug, flags.NoColor).WithPrefix("Process: ")
+func Process(buildInstances []*build.Instance, flags Flags, log *logger.Logger, handler instanceHandler) {
 
 	var excludeRegexp, includeRegexp *regexp.Regexp
 	var excludeRegexpErr, includeRegexpErr error
@@ -48,14 +46,14 @@ func Process(buildInstances []*build.Instance, flags Flags, handler instanceHand
 	if flags.Exclude != "" {
 		excludeRegexp, excludeRegexpErr = regexp.Compile(flags.Exclude)
 		if excludeRegexpErr != nil {
-			log.Error(excludeRegexpErr.Error())
+			log.Fatal(excludeRegexpErr)
 		}
 	}
 
 	if flags.Include != "" {
 		includeRegexp, includeRegexpErr = regexp.Compile(flags.Include)
 		if includeRegexpErr != nil {
-			log.Error(includeRegexpErr.Error())
+			log.Fatal(includeRegexpErr)
 		}
 	}
 
@@ -77,6 +75,7 @@ func Process(buildInstances []*build.Instance, flags Flags, handler instanceHand
 		if cueInstance.Err != nil {
 			// parse errors will be exposed here
 			log.Error(cueInstance.Err, cueInstance.Err.Position())
+			// TODO consider using log.Fatal and removing continue
 			continue
 		}
 		handler(buildInstance, cueInstance, cueInstance.Value())

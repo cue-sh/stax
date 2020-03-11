@@ -44,10 +44,7 @@ type Config struct {
 }
 
 // LoadConfig looks for config.stx.cue to be colocated with cue.mod and unifies that with a built-in default config schema
-func LoadConfig(flags Flags) *Config {
-
-	log := logger.NewLogger(flags.Debug, flags.NoColor).WithPrefix("CONFIG: ")
-
+func LoadConfig(log *logger.Logger) *Config {
 	wd, _ := os.Getwd()
 	separator := string(os.PathSeparator)
 	dirs := strings.Split(wd, separator)
