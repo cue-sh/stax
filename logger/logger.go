@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 
 	"github.com/logrusorgru/aurora"
 )
@@ -18,19 +19,19 @@ type Logger struct {
 }
 
 var logger *Logger
+var once sync.Once
 
 // NewLogger returns *logger.Logger
 func NewLogger(debug, noColor bool) *Logger {
-	if logger == nil {
-		lg := Logger{
+	once.Do(func() {
+		logger = &Logger{
 			debug:  debug,
 			stdout: log.New(os.Stdout, "", 0),
 			stderr: log.New(os.Stderr, "", 0),
 			errors: 0,
 			au:     aurora.NewAurora(!noColor), // flip noColor. --no-color -> noColor=true therefore colors=!noColor=false
 		}
-		logger = &lg
-	}
+	})
 	return logger
 }
 
@@ -57,19 +58,17 @@ func (l *Logger) Info(args ...interface{}) {
 
 // Infof prints formatted text to stdout
 func (l *Logger) Infof(format string, args ...interface{}) {
-	l.stderr.Printf(format, args...)
+	l.stdout.Printf(format, args...)
 }
 
 // Warn prints to stderr
 func (l *Logger) Warn(args ...interface{}) {
-	l.errors++
-	l.stderr.Println(l.au.Yellow(fmt.Sprint(args...)))
+	l.stdout.Println(l.au.Yellow(fmt.Sprint(args...)))
 }
 
 // Warnf prints to stderr
 func (l *Logger) Warnf(format string, args ...interface{}) {
-	l.errors++
-	l.stderr.Print(l.au.Yellow(fmt.Sprintf(format, args...)))
+	l.stdout.Print(l.au.Yellow(fmt.Sprintf(format, args...)))
 }
 
 // Error prints to stderr
