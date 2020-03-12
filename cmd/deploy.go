@@ -53,10 +53,12 @@ var deployCmd = &cobra.Command{
 				log.Infof("%s", au.Gray(11, "  Validating template..."))
 
 				// get a session and cloudformation service client
+				log.Debugf("\nGetting session for profile %s\n", stack.Profile)
 				session := stx.GetSession(stack.Profile)
 				cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
 
 				// read template from disk
+				log.Debug("Reading template from", fileName)
 				templateFileBytes, _ := ioutil.ReadFile(fileName)
 				templateBody := string(templateFileBytes)
 				usr, _ := user.Current()
@@ -79,6 +81,7 @@ var deployCmd = &cobra.Command{
 				//log.Infof("%+v\n", validateTemplateOutput.String())
 
 				// look to see if stack exists
+				log.Debug("Describing", stackName)
 				describeStacksInput := cloudformation.DescribeStacksInput{StackName: &stackName}
 				_, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)
 
