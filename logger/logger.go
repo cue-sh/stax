@@ -2,7 +2,6 @@ package logger
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"sync"
 
@@ -12,8 +11,6 @@ import (
 // Logger is a sugar coating around log.Logger
 type Logger struct {
 	debug  bool
-	stdout *log.Logger
-	stderr *log.Logger
 	errors int
 	au     aurora.Aurora
 }
@@ -26,8 +23,6 @@ func NewLogger(debug, noColor bool) *Logger {
 	once.Do(func() {
 		logger = &Logger{
 			debug:  debug,
-			stdout: log.New(os.Stdout, "", 0),
-			stderr: log.New(os.Stderr, "", 0),
 			errors: 0,
 			au:     aurora.NewAurora(!noColor), // flip noColor. --no-color -> noColor=true therefore colors=!noColor=false
 		}
@@ -53,34 +48,34 @@ func (l *Logger) Debugf(format string, args ...interface{}) {
 
 // Info prints to stdout
 func (l *Logger) Info(args ...interface{}) {
-	l.stdout.Println(args...)
+	fmt.Fprintln(os.Stdout, args...)
 }
 
 // Infof prints formatted text to stdout
 func (l *Logger) Infof(format string, args ...interface{}) {
-	l.stdout.Printf(format, args...)
+	fmt.Fprintf(os.Stdout, format, args...)
 }
 
 // Warn prints to stderr
 func (l *Logger) Warn(args ...interface{}) {
-	l.stdout.Println(l.au.Yellow(fmt.Sprint(args...)))
+	fmt.Fprintln(os.Stdout, l.au.Yellow(fmt.Sprint(args...)))
 }
 
 // Warnf prints to stderr
 func (l *Logger) Warnf(format string, args ...interface{}) {
-	l.stdout.Print(l.au.Yellow(fmt.Sprintf(format, args...)))
+	fmt.Fprint(os.Stdout, l.au.Yellow(fmt.Sprintf(format, args...)))
 }
 
 // Error prints to stderr
 func (l *Logger) Error(args ...interface{}) {
 	l.errors++
-	l.stderr.Println(l.au.Red(fmt.Sprint(args...)))
+	fmt.Fprintln(os.Stderr, l.au.Red(fmt.Sprint(args...)))
 }
 
 // Errorf prints to stderr
 func (l *Logger) Errorf(format string, args ...interface{}) {
 	l.errors++
-	l.stderr.Print(l.au.Red(fmt.Sprintf(format, args...)))
+	fmt.Fprint(os.Stderr, l.au.Red(fmt.Sprintf(format, args...)))
 }
 
 // Fatal prints to stderr and exits 1
@@ -93,13 +88,6 @@ func (l *Logger) Fatal(args ...interface{}) {
 func (l *Logger) Fatalf(format string, args ...interface{}) {
 	l.Errorf(format, args...)
 	l.Flush()
-}
-
-// WithPrefix allows setting of stdout and stderr prefixes and enables chaining
-func (l *Logger) WithPrefix(prefix string) *Logger {
-	l.stdout.SetPrefix(prefix)
-	l.stderr.SetPrefix(prefix)
-	return l
 }
 
 // Flush will call os.Exit if logger accumulated errors
