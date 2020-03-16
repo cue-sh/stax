@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -21,12 +20,20 @@ var statusCmd = &cobra.Command{
 	Short: "Returns a stack status if it exists",
 	Long:  `How long...?`,
 	Run: func(cmd *cobra.Command, args []string) {
-
+		defer log.Flush()
+		//TODO add debug messages
 		stx.EnsureVaultSession(config)
 		buildInstances := stx.GetBuildInstances(args, "cfn")
-		stx.Process(buildInstances, flags, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
+		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 
-			stacks := stx.GetStacks(cueValue, flags)
+			stacks, stacksErr := stx.GetStacks(cueValue, flags)
+			if stacksErr != nil {
+				log.Error(stacksErr)
+			}
+
+			if stacks == nil {
+				return
+			}
 
 			for stackName, stack := range stacks {
 				session := stx.GetSession(stack.Profile)
@@ -36,7 +43,7 @@ var statusCmd = &cobra.Command{
 				describeStacksInput := cloudformation.DescribeStacksInput{StackName: &stackName}
 				describeStacksOutput, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)
 				if describeStacksErr != nil {
-					fmt.Println(au.Red(describeStacksErr))
+					log.Error(describeStacksErr)
 					continue
 				}
 

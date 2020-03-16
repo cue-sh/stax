@@ -1,7 +1,6 @@
 package stx
 
 import (
-	"fmt"
 	"regexp"
 
 	"cuelang.org/go/cue"
@@ -9,7 +8,7 @@ import (
 	"cuelang.org/go/cue/build"
 	"cuelang.org/go/cue/load"
 	"cuelang.org/go/cue/parser"
-	"github.com/logrusorgru/aurora"
+	"github.com/TangoGroup/stx/logger"
 )
 
 type instanceHandler func(*build.Instance, *cue.Instance, cue.Value)
@@ -39,32 +38,36 @@ func GetBuildInstances(args []string, pkg string) []*build.Instance {
 }
 
 // Process iterates over instances, filters based on flags, and applies the handler function for each
-func Process(buildInstances []*build.Instance, flags Flags, handler instanceHandler) {
+func Process(buildInstances []*build.Instance, flags Flags, log *logger.Logger, handler instanceHandler) {
 
 	var excludeRegexp, includeRegexp *regexp.Regexp
 	var excludeRegexpErr, includeRegexpErr error
-	au := aurora.NewAurora(true) // TODO move to logger
 
 	if flags.Exclude != "" {
+		log.Debug("Compiling --exclude regexp...")
 		excludeRegexp, excludeRegexpErr = regexp.Compile(flags.Exclude)
 		if excludeRegexpErr != nil {
-			fmt.Println(au.Red(excludeRegexpErr.Error()))
+			log.Fatal(excludeRegexpErr)
 		}
 	}
 
 	if flags.Include != "" {
+		log.Debug("Compiling --include regexp...")
 		includeRegexp, includeRegexpErr = regexp.Compile(flags.Include)
 		if includeRegexpErr != nil {
-			fmt.Println(au.Red(includeRegexpErr.Error()))
+			log.Fatal(includeRegexpErr)
 		}
 	}
 
+	log.Debug("Iterating build instances...")
 	for _, buildInstance := range buildInstances {
 		if excludeRegexp != nil && excludeRegexp.MatchString(buildInstance.DisplayPath) {
+			log.Debug("Excluded via --exlude: ", buildInstance.DisplayPath)
 			continue
 		}
 
 		if includeRegexp != nil && !includeRegexp.MatchString(buildInstance.DisplayPath) {
+			log.Debug("NOT included via --include: ", buildInstance.DisplayPath)
 			continue
 		}
 		// A cue instance defines a single configuration based on a collection of underlying CUE files.
@@ -76,9 +79,12 @@ func Process(buildInstances []*build.Instance, flags Flags, handler instanceHand
 		cueInstance := cue.Build([]*build.Instance{buildInstance})[0]
 		if cueInstance.Err != nil {
 			// parse errors will be exposed here
-			fmt.Println(au.Red(cueInstance.Err), cueInstance.Err.Position())
+			log.Error(cueInstance.Err, cueInstance.Err.Position())
+			// TODO consider using log.Fatal and removing continue
 			continue
 		}
+
+		log.Debug("Executing handler...")
 		handler(buildInstance, cueInstance, cueInstance.Value())
 	}
 }

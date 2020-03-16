@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
 	"strings"
 
 	"github.com/TangoGroup/stx/stx"
@@ -20,16 +18,27 @@ var printCmd = &cobra.Command{
 	Long:  `yada yada yada`,
 	Run: func(cmd *cobra.Command, args []string) {
 
+		defer log.Flush()
+
+		log.Debug("Print command running...")
 		if flags.PrintOnlyErrors && flags.PrintHideErrors {
-			fmt.Println(au.Red("Cannot show only errors while hiding them."))
-			os.Exit(1)
+			log.Fatal("Cannot show only errors while hiding them.")
 		}
-		totalErrors := 0
+		log.Debug("Getting build instances...")
 		buildInstances := stx.GetBuildInstances(args, "cfn")
-		stx.Process(buildInstances, flags, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
+		log.Debug("Processing build instances...")
+		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 
 			valueToMarshal := cueValue
-			stacks := stx.GetStacks(cueValue, flags)
+			log.Debug("Getting stacks...")
+			stacks, stacksErr := stx.GetStacks(cueValue, flags)
+			if stacksErr != nil && !flags.PrintHideErrors {
+				log.Error(stacksErr)
+			}
+
+			if stacks == nil {
+				return
+			}
 
 			for stackName := range stacks {
 				var path []string
@@ -38,37 +47,34 @@ var printCmd = &cobra.Command{
 					path = []string{"Stacks", stackName}
 					path = append(path, strings.Split(flags.PrintPath, ".")...)
 					valueToMarshal = cueValue.Lookup(path...)
-					if valueToMarshal.Err() != nil {
+					valueToMarshalErr := valueToMarshal.Err()
+					if valueToMarshalErr != nil {
+						// this just means the path didn't exist. not a real error
 						continue
 					}
 					displayPath = strings.Join(path, ".") + ":\n"
 				}
+
 				yml, ymlErr := yaml.Marshal(valueToMarshal)
 
 				if ymlErr != nil {
-					totalErrors++
 					if !flags.PrintHideErrors {
-						fmt.Println(au.Cyan(buildInstance.DisplayPath))
-						fmt.Println(au.Red(ymlErr.Error()))
+						log.Info(au.Cyan(buildInstance.DisplayPath))
+						log.Error(ymlErr)
 					}
 				} else {
 					if !flags.PrintOnlyErrors {
-						fmt.Println(au.Cyan(buildInstance.DisplayPath))
-						fmt.Printf("%s\n", displayPath+string(yml))
+						log.Info(au.Cyan(buildInstance.DisplayPath))
+						log.Infof("%s\n", displayPath+string(yml))
 					}
 				}
 			}
 		})
-
-		if !flags.PrintHideErrors && totalErrors > 0 {
-			fmt.Println("Total errors: ", totalErrors)
-		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(printCmd)
-	// TODO add flag to skip/hide errors
 
 	printCmd.Flags().BoolVar(&flags.PrintOnlyErrors, "only-errors", false, "Only print errors. Cannot be used in concjunction with --hide-errors")
 	printCmd.Flags().BoolVar(&flags.PrintHideErrors, "hide-errors", false, "Hide errors. Cannot be used in concjunction with --only-errors")

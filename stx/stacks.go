@@ -1,8 +1,6 @@
 package stx
 
 import (
-	"fmt"
-
 	"cuelang.org/go/cue"
 )
 
@@ -16,24 +14,23 @@ type Stack struct {
 type Stacks map[string]Stack
 
 // GetStacks returns the stacks as decoded from the cue instance value
-func GetStacks(cueValue cue.Value, flags Flags) Stacks {
+func GetStacks(cueValue cue.Value, flags Flags) (Stacks, error) {
 
 	var stacks Stacks
 
 	stacksCueValue := cueValue.Lookup("Stacks")
 	if !stacksCueValue.Exists() {
-		return nil
+		return nil, nil
 	}
 
 	decodeErr := stacksCueValue.Decode(&stacks)
 	if decodeErr != nil {
 		// evaluation errors (incomplete values, mismatched types, etc)
-		fmt.Println(decodeErr)
-		return nil
+		return nil, decodeErr
 	}
 
 	if len(stacks) <= 0 {
-		return nil
+		return nil, nil
 	}
 
 	// apply global flags here so individual commands dont have to
@@ -51,5 +48,5 @@ func GetStacks(cueValue cue.Value, flags Flags) Stacks {
 		}
 	}
 
-	return stacks
+	return stacks, nil
 }

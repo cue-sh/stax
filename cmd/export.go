@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -19,29 +18,46 @@ var exportCmd = &cobra.Command{
 	Short: "Exports cue templates that implement the Stack pattern as yml files.",
 	Long:  `Yada yada yada.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		defer log.Flush()
+
 		buildInstances := stx.GetBuildInstances(args, "cfn")
-		stx.Process(buildInstances, flags, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
-			stacks := stx.GetStacks(cueValue, flags)
-			if stacks != nil {
-				for stackName, stack := range stacks {
-					saveStackAsYml(stackName, stack, buildInstance, cueValue)
+
+		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
+			stacks, stacksErr := stx.GetStacks(cueValue, flags)
+			if stacksErr != nil {
+				log.Error(stacksErr)
+			}
+
+			if stacks == nil {
+				return
+			}
+
+			for stackName, stack := range stacks {
+				_, saveErr := saveStackAsYml(stackName, stack, buildInstance, cueValue)
+				if saveErr != nil {
+					log.Error(saveErr)
 				}
 			}
 		})
 	},
 }
 
-func saveStackAsYml(stackName string, stack stx.Stack, buildInstance *build.Instance, cueValue cue.Value) string {
+func saveStackAsYml(stackName string, stack stx.Stack, buildInstance *build.Instance, cueValue cue.Value) (string, error) {
 	dir := filepath.Clean(config.CueRoot + "/" + config.Export.YmlPath + "/" + stack.Profile)
 	os.MkdirAll(dir, 0755)
-	//fmt.Println(err)
+
 	fileName := dir + "/" + stackName + ".cfn.yml"
-	fmt.Printf("%s %s %s %s\n", au.White("Exported"), au.Magenta(stackName), au.White("⤏"), fileName)
+	log.Infof("%s %s %s %s\n", au.White("Exported"), au.Magenta(stackName), au.White("⤏"), fileName)
 	template := cueValue.Lookup("Stacks", stackName, "Template")
-	yml, _ := yaml.Marshal(template)
-	//fmt.Printf("YAML: %+v\n", string(yml))
-	ioutil.WriteFile(fileName, yml, 0644)
-	return fileName
+	yml, ymlErr := yaml.Marshal(template)
+	if ymlErr != nil {
+		return "", ymlErr
+	}
+	writeErr := ioutil.WriteFile(fileName, yml, 0644)
+	if writeErr != nil {
+		return "", writeErr
+	}
+	return fileName, nil
 }
 
 func init() {

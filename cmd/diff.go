@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"regexp"
@@ -22,36 +21,49 @@ var diffCmd = &cobra.Command{
 	Short: "DIFF against CloudFormation for the evaluted leaves.",
 	Long:  `Yada yada yada.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		defer log.Flush()
+
 		stx.EnsureVaultSession(config)
+
 		buildInstances := stx.GetBuildInstances(args, "cfn")
-		stx.Process(buildInstances, flags, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
-			stacks := stx.GetStacks(cueValue, flags)
-			if stacks != nil {
-				//fmt.Printf("%+v\n\n", top)
 
-				for stackName, stack := range stacks {
-					fileName := saveStackAsYml(stackName, stack, buildInstance, cueValue)
-
-					// get a session and cloudformation service client
-					session := stx.GetSession(stack.Profile)
-					cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
-
-					// read template from disk
-					templateFileBytes, _ := ioutil.ReadFile(fileName)
-					templateBody := string(templateFileBytes)
-
-					// look to see if stack exists
-					describeStacksInput := cloudformation.DescribeStacksInput{StackName: &stackName}
-					describeStacksOutput, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)
-
-					if describeStacksErr != nil {
-						fmt.Printf("DESC STAX:\n%+v %+v", describeStacksOutput, au.Red(describeStacksErr))
-						continue
-					}
-
-					diff(cfn, stackName, templateBody)
-				}
+		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
+			stacks, stacksErr := stx.GetStacks(cueValue, flags)
+			if stacksErr != nil {
+				log.Error(stacksErr)
 			}
+
+			if stacks == nil {
+				return
+			}
+
+			for stackName, stack := range stacks {
+				fileName, saveErr := saveStackAsYml(stackName, stack, buildInstance, cueValue)
+				if saveErr != nil {
+					log.Error(saveErr)
+				}
+
+				// get a session and cloudformation service client
+				session := stx.GetSession(stack.Profile)
+				cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
+
+				// read template from disk
+				templateFileBytes, _ := ioutil.ReadFile(fileName)
+				templateBody := string(templateFileBytes)
+
+				// look to see if stack exists
+				describeStacksInput := cloudformation.DescribeStacksInput{StackName: &stackName}
+				describeStacksOutput, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)
+
+				if describeStacksErr != nil {
+					log.Debugf("DESC STAX:\n%+v\n", describeStacksOutput)
+					log.Error(describeStacksErr)
+					continue
+				}
+
+				diff(cfn, stackName, templateBody)
+			}
+
 		})
 	},
 }
@@ -61,21 +73,20 @@ func diff(cfn *cloudformation.CloudFormation, stackName, templateBody string) {
 		StackName: &stackName,
 	})
 	if err != nil {
-		fmt.Printf("%+v\n", au.Red("Error getting template for stack: "+stackName))
+		log.Error("Error getting template for stack", stackName)
 	} else {
-		// fmt.Println(*existingTemplate.TemplateBody)
 		r, _ := regexp.Compile("!(Base64|Cidr|FindInMap|GetAtt|GetAZs|ImportValue|Join|Select|Split|Sub|Transform|Ref|And|Equals|If|Not|Or)")
-		if r.MatchString(*existingTemplate.TemplateBody) {
-			fmt.Printf("  %+v\n", au.Red("The existing stack uses short intrinsic functions, unable to create diff: "+stackName))
+		if r.MatchString(aws.StringValue(existingTemplate.TemplateBody)) {
+			log.Warn("The existing stack uses short intrinsic functions, unable to create diff: " + stackName)
 		} else {
-			existingDoc, _ := ytbx.LoadDocuments([]byte(*existingTemplate.TemplateBody))
+			existingDoc, _ := ytbx.LoadDocuments([]byte(aws.StringValue(existingTemplate.TemplateBody)))
 			doc, _ := ytbx.LoadDocuments([]byte(templateBody))
 			report, err := dyff.CompareInputFiles(
 				ytbx.InputFile{Documents: existingDoc},
 				ytbx.InputFile{Documents: doc},
 			)
 			if err != nil {
-				fmt.Printf("%+v\n", au.Red("Error creating template diff for stack: "+stackName))
+				log.Error("Error creating template diff for stack: " + stackName)
 			} else {
 				if len(report.Diffs) > 0 {
 					reportWriter := &dyff.HumanReport{
