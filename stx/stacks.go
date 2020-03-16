@@ -6,8 +6,9 @@ import (
 
 // Stack represents an individual stack
 type Stack struct {
-	Profile, SopsProfile, Region, Environment, RegionCode string
-	Tags                                                  map[string]string
+	Name, Profile, SopsProfile, Region, Environment, RegionCode string
+	DependsOn                                                   []string
+	Tags                                                        map[string]string
 }
 
 // Stacks represents the Go equivalent of the Cue Stacks pattern

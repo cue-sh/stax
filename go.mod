@@ -6,6 +6,7 @@ require (
 	cuelang.org/go v0.0.15
 	github.com/aws/aws-sdk-go v1.29.2
 	github.com/briandowns/spinner v1.8.0
+	github.com/deckarep/golang-set v1.7.1
 	github.com/ghodss/yaml v1.0.0
 	github.com/gonvenience/ytbx v1.2.2
 	github.com/homeport/dyff v1.0.2
