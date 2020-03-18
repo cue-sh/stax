@@ -55,7 +55,7 @@ var printCmd = &cobra.Command{
 
 				yml, ymlErr := yaml.Marshal(valueToMarshal)
 				stackName, _ = stackValue.Label()
-				log.Infof("%s%s\n", au.Magenta(stackName), au.BrightBlue("."+displayPath))
+				log.Infof("%s%s\n", au.Magenta(stackName), au.Brown("."+displayPath))
 				if ymlErr != nil {
 					if !flags.PrintHideErrors {
 						log.Error(ymlErr)
