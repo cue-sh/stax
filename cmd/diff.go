@@ -56,7 +56,7 @@ var diffCmd = &cobra.Command{
 				templateBody := string(templateFileBytes)
 
 				// look to see if stack exists
-				describeStacksInput := cloudformation.DescribeStacksInput{StackName: &stackName}
+				describeStacksInput := cloudformation.DescribeStacksInput{StackName: aws.String(stack.Name)}
 				describeStacksOutput, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)
 
 				if describeStacksErr != nil {
@@ -65,7 +65,7 @@ var diffCmd = &cobra.Command{
 					continue
 				}
 
-				diff(cfn, stackName, templateBody)
+				diff(cfn, stack.Name, templateBody)
 			}
 
 		})

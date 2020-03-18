@@ -13,8 +13,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var stackName string
-
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Returns a stack status if it exists",
@@ -45,7 +43,7 @@ var statusCmd = &cobra.Command{
 				cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
 
 				// use a struct to pass a string, it's GC'd!
-				describeStacksInput := cloudformation.DescribeStacksInput{StackName: aws.String(stackName)}
+				describeStacksInput := cloudformation.DescribeStacksInput{StackName: aws.String(stack.Name)}
 				describeStacksOutput, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)
 				if describeStacksErr != nil {
 					log.Error(describeStacksErr)
@@ -67,7 +65,7 @@ var statusCmd = &cobra.Command{
 				if strings.Contains(status, "FAIL") || strings.Contains(status, "ROLLBACK") {
 					status = au.Red(status).String()
 				}
-				table.Append([]string{au.Magenta(stackName).String(), status, describedStack.CreationTime.Local().String(), describedStack.LastUpdatedTime.Local().String(), aws.StringValue(describedStack.StackStatusReason)})
+				table.Append([]string{au.Magenta(stack.Name).String(), status, describedStack.CreationTime.Local().String(), describedStack.LastUpdatedTime.Local().String(), aws.StringValue(describedStack.StackStatusReason)})
 				table.Render()
 			}
 		})

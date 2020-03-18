@@ -82,7 +82,7 @@ var eventsCmd = &cobra.Command{
 						reason = au.Red(reason).String()
 					}
 					resource := *event.LogicalResourceId
-					if strings.Contains(*event.LogicalResourceId, stackName) {
+					if strings.Contains(*event.LogicalResourceId, stack.Name) {
 						resource = au.Magenta(resource).String()
 					}
 
