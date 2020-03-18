@@ -29,42 +29,38 @@ var printCmd = &cobra.Command{
 		log.Debug("Processing build instances...")
 		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 
-			valueToMarshal := cueValue
 			log.Debug("Getting stacks...")
-			stacks, stacksErr := stx.GetStacks(cueValue, flags)
-			if stacksErr != nil && !flags.PrintHideErrors {
-				log.Error(stacksErr)
-			}
+			//stacks, stacksErr := stx.GetStacks(cueValue, flags)
 
-			if stacks == nil {
-				return
+			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueValue, flags)
+			if stacksIteratorErr != nil {
+				log.Fatal(stacksIteratorErr)
 			}
+			log.Info(au.Cyan(buildInstance.DisplayPath))
+			for stacksIterator.Next() {
+				stack := stacksIterator.Value()
+				valueToMarshal := stack
+				path := []string{}
+				displayPath := ""
 
-			for stackName := range stacks {
-				var path []string
-				var displayPath string
 				if flags.PrintPath != "" {
-					path = []string{"Stacks", stackName}
 					path = append(path, strings.Split(flags.PrintPath, ".")...)
 					valueToMarshal = cueValue.Lookup(path...)
-					valueToMarshalErr := valueToMarshal.Err()
-					if valueToMarshalErr != nil {
-						// this just means the path didn't exist. not a real error
+					displayPath = strings.Join(path, ".") + ":\n"
+					if !valueToMarshal.Exists() {
 						continue
 					}
-					displayPath = strings.Join(path, ".") + ":\n"
 				}
 
 				yml, ymlErr := yaml.Marshal(valueToMarshal)
-
+				stackName, _ = stack.Label()
+				log.Info(au.Magenta(stackName))
 				if ymlErr != nil {
 					if !flags.PrintHideErrors {
-						log.Info(au.Cyan(buildInstance.DisplayPath))
 						log.Error(ymlErr)
 					}
 				} else {
 					if !flags.PrintOnlyErrors {
-						log.Info(au.Cyan(buildInstance.DisplayPath))
 						log.Infof("%s\n", displayPath+string(yml))
 					}
 				}
