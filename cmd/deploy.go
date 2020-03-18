@@ -299,8 +299,13 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 	}
 
 	if flags.DeploySave || flags.DeployWait {
-		log.Infof("%s", au.Gray(11, "  Waiting for stack update..."))
-		cfn.WaitUntilStackUpdateCompleteWithContext(context.Background(), &describeStacksInput, waitOption)
+		log.Infof("%s", au.Gray(11, "  Waiting for stack..."))
+		switch changeSetType {
+		case "UPDATE":
+			cfn.WaitUntilStackUpdateCompleteWithContext(context.Background(), &describeStacksInput, waitOption)
+		case "CREATE":
+			cfn.WaitUntilStackCreateCompleteWithContext(context.Background(), &describeStacksInput, waitOption)
+		}
 		log.Check()
 
 		if flags.DeploySave {
