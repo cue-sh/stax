@@ -22,22 +22,28 @@ var saveCmd = &cobra.Command{
 	Short: "Saves stack outputs as importable libraries to cue.mod",
 	Long:  `Yada Yada Yada...`,
 	Run: func(cmd *cobra.Command, args []string) {
+
 		defer log.Flush()
-
 		stx.EnsureVaultSession(config)
+
 		buildInstances := stx.GetBuildInstances(args, "cfn")
-		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
-			stacks, stacksErr := stx.GetStacks(cueValue, flags)
-			if stacksErr != nil {
-				log.Error(stacksErr)
+
+		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
+			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)
+			if stacksIteratorErr != nil {
+				log.Fatal(stacksIteratorErr)
 			}
 
-			if stacks == nil {
-				return
-			}
+			for stacksIterator.Next() {
+				stackValue := stacksIterator.Value()
+				var stack stx.Stack
+				decodeErr := stackValue.Decode(&stack)
+				if decodeErr != nil {
+					log.Error(decodeErr)
+					continue
+				}
 
-			for stackName, stack := range stacks {
-				saveErr := saveStackOutputs(buildInstance, stackName, stack)
+				saveErr := saveStackOutputs(buildInstance, stack)
 				if saveErr != nil {
 					log.Error(saveErr)
 				}
@@ -46,19 +52,19 @@ var saveCmd = &cobra.Command{
 	},
 }
 
-func saveStackOutputs(buildInstance *build.Instance, stackName string, stack stx.Stack) error {
+func saveStackOutputs(buildInstance *build.Instance, stack stx.Stack) error {
 
 	// get a session and cloudformation service client
 	session := stx.GetSession(stack.Profile)
 	cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
-	describeStacksInput := cloudformation.DescribeStacksInput{StackName: &stackName}
+	describeStacksInput := cloudformation.DescribeStacksInput{StackName: aws.String(stack.Name)}
 	describeStacksOutput, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)
 	if describeStacksErr != nil {
 		return describeStacksErr
 	}
 
 	if len(describeStacksOutput.Stacks[0].Outputs) < 1 {
-		log.Infof("%s %s %s\n", au.White("Skipped"), au.Magenta(stackName), "with no outputs.")
+		log.Infof("%s %s %s\n", au.White("Skipped"), au.Magenta(stack.Name), "with no outputs.")
 		return nil
 	}
 
@@ -85,12 +91,12 @@ func saveStackOutputs(buildInstance *build.Instance, stackName string, stack stx
 		cueOutPath = strings.Replace(path, buildInstance.Root, "", 1)
 	}
 	cueOutPath = buildInstance.Root + "/cue.mod/usr/cfn.out" + cueOutPath
-	fileName := cueOutPath + "/" + stackName + ".out.cue"
-	log.Infof("%s %s %s %s\n", au.White("Saving"), au.Magenta(stackName), au.White("⤏"), fileName)
+	fileName := cueOutPath + "/" + stack.Name + ".out.cue"
+	log.Infof("%s %s %s %s\n", au.White("Saving"), au.Magenta(stack.Name), au.White("⤏"), fileName)
 
 	// create the .out.cue file
 	cuePackage := filepath.Base(cueOutPath)
-	result := "package " + cuePackage + "\n\n\"" + stackName + "\": {\n"
+	result := "package " + cuePackage + "\n\n\"" + stack.Name + "\": {\n"
 	// convert cloudformation outputs into simple key:value pairs
 	for _, output := range describeStacksOutput.Stacks[0].Outputs {
 		result += fmt.Sprintf("\"%s\":\"%s\"\n", aws.StringValue(output.OutputKey), aws.StringValue(output.OutputValue))

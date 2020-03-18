@@ -9,6 +9,7 @@ require (
 	github.com/deckarep/golang-set v1.7.1
 	github.com/ghodss/yaml v1.0.0
 	github.com/gonvenience/ytbx v1.2.2
+	github.com/google/martian v2.1.0+incompatible
 	github.com/homeport/dyff v1.0.2
 	github.com/joho/godotenv v1.3.0
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381

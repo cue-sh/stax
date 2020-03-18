@@ -19,27 +19,31 @@ var eventsCmd = &cobra.Command{
 	Short: "Shows the latest events from the evaluated stacks.",
 	Long:  `Yaba daba doo.`,
 	Run: func(cmd *cobra.Command, args []string) {
-
-		defer log.Flush()
 		// TODO add debug messages
+		defer log.Flush()
 		stx.EnsureVaultSession(config)
+
 		buildInstances := stx.GetBuildInstances(args, "cfn")
-		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
-			stacks, stacksErr := stx.GetStacks(cueValue, flags)
-			if stacksErr != nil {
-				log.Error(stacksErr)
+
+		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
+			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)
+			if stacksIteratorErr != nil {
+				log.Fatal(stacksIteratorErr)
 			}
 
-			if stacks == nil {
-				return
-			}
+			for stacksIterator.Next() {
+				stackValue := stacksIterator.Value()
+				var stack stx.Stack
+				decodeErr := stackValue.Decode(&stack)
+				if decodeErr != nil {
+					log.Error(decodeErr)
+					continue
+				}
 
-			for stackName, stack := range stacks {
 				// get a session and cloudformation service client
 				session := stx.GetSession(stack.Profile)
 				cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
-				sn := stackName // to avoid issues with pointing to a for-scoped var
-				describeStackEventsInput := cloudformation.DescribeStackEventsInput{StackName: &sn}
+				describeStackEventsInput := cloudformation.DescribeStackEventsInput{StackName: aws.String(stack.Name)}
 				describeStackEventsOutput, describeStackEventsErr := cfn.DescribeStackEvents(&describeStackEventsInput)
 				if describeStackEventsErr != nil {
 					log.Error(describeStackEventsErr)

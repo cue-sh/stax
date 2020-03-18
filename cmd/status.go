@@ -20,27 +20,32 @@ var statusCmd = &cobra.Command{
 	Short: "Returns a stack status if it exists",
 	Long:  `How long...?`,
 	Run: func(cmd *cobra.Command, args []string) {
-		defer log.Flush()
 		//TODO add debug messages
+		defer log.Flush()
 		stx.EnsureVaultSession(config)
+
 		buildInstances := stx.GetBuildInstances(args, "cfn")
-		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 
-			stacks, stacksErr := stx.GetStacks(cueValue, flags)
-			if stacksErr != nil {
-				log.Error(stacksErr)
+		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
+
+			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)
+			if stacksIteratorErr != nil {
+				log.Fatal(stacksIteratorErr)
 			}
 
-			if stacks == nil {
-				return
-			}
-
-			for stackName, stack := range stacks {
+			for stacksIterator.Next() {
+				stackValue := stacksIterator.Value()
+				var stack stx.Stack
+				decodeErr := stackValue.Decode(&stack)
+				if decodeErr != nil {
+					log.Error(decodeErr)
+					continue
+				}
 				session := stx.GetSession(stack.Profile)
 				cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
 
 				// use a struct to pass a string, it's GC'd!
-				describeStacksInput := cloudformation.DescribeStacksInput{StackName: &stackName}
+				describeStacksInput := cloudformation.DescribeStacksInput{StackName: aws.String(stackName)}
 				describeStacksOutput, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)
 				if describeStacksErr != nil {
 					log.Error(describeStacksErr)

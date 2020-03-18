@@ -27,41 +27,43 @@ var printCmd = &cobra.Command{
 		log.Debug("Getting build instances...")
 		buildInstances := stx.GetBuildInstances(args, "cfn")
 		log.Debug("Processing build instances...")
-		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
+		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
 
-			log.Debug("Getting stacks...")
-			//stacks, stacksErr := stx.GetStacks(cueValue, flags)
-
-			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueValue, flags)
+			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)
 			if stacksIteratorErr != nil {
 				log.Fatal(stacksIteratorErr)
 			}
+
 			log.Info(au.Cyan(buildInstance.DisplayPath))
 			for stacksIterator.Next() {
-				stack := stacksIterator.Value()
-				valueToMarshal := stack
+				stackValue := stacksIterator.Value()
+				valueToMarshal := stackValue
 				path := []string{}
 				displayPath := ""
 
 				if flags.PrintPath != "" {
+					log.Debug("Evaluating --path...")
 					path = append(path, strings.Split(flags.PrintPath, ".")...)
-					valueToMarshal = cueValue.Lookup(path...)
-					displayPath = strings.Join(path, ".") + ":\n"
+					valueToMarshal = stackValue.Lookup(path...)
+					displayPath = strings.Join(path, ".") + ":"
 					if !valueToMarshal.Exists() {
+						log.Debug(displayPath, "not found")
 						continue
 					}
+					log.Debug("Found", displayPath)
 				}
 
 				yml, ymlErr := yaml.Marshal(valueToMarshal)
-				stackName, _ = stack.Label()
-				log.Info(au.Magenta(stackName))
+				stackName, _ = stackValue.Label()
+				log.Infof("%s%s\n", au.Magenta(stackName), au.BrightBlue("."+displayPath))
 				if ymlErr != nil {
 					if !flags.PrintHideErrors {
 						log.Error(ymlErr)
 					}
 				} else {
 					if !flags.PrintOnlyErrors {
-						log.Infof("%s\n", displayPath+string(yml))
+						ymlStr := strings.Replace(string(yml), "\n", "\n  ", -1)
+						log.Infof("  %s\n", ymlStr)
 					}
 				}
 			}

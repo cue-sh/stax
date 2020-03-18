@@ -21,24 +21,28 @@ var diffCmd = &cobra.Command{
 	Short: "DIFF against CloudFormation for the evaluted leaves.",
 	Long:  `Yada yada yada.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		defer log.Flush()
 
+		defer log.Flush()
 		stx.EnsureVaultSession(config)
 
 		buildInstances := stx.GetBuildInstances(args, "cfn")
 
-		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
-			stacks, stacksErr := stx.GetStacks(cueValue, flags)
-			if stacksErr != nil {
-				log.Error(stacksErr)
+		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
+			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)
+			if stacksIteratorErr != nil {
+				log.Fatal(stacksIteratorErr)
 			}
 
-			if stacks == nil {
-				return
-			}
+			for stacksIterator.Next() {
+				stackValue := stacksIterator.Value()
+				var stack stx.Stack
+				decodeErr := stackValue.Decode(&stack)
+				if decodeErr != nil {
+					log.Error(decodeErr)
+					continue
+				}
 
-			for stackName, stack := range stacks {
-				fileName, saveErr := saveStackAsYml(stackName, stack, buildInstance, cueValue)
+				fileName, saveErr := saveStackAsYml(stack, buildInstance, stackValue)
 				if saveErr != nil {
 					log.Error(saveErr)
 				}

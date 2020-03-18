@@ -32,9 +32,8 @@ func init() {
 
 type deployArgs struct {
 	stack         stx.Stack
+	stackValue    cue.Value
 	buildInstance *build.Instance
-	cueInstance   *cue.Instance
-	cueValue      cue.Value
 }
 
 // deployCmd represents the deploy command
@@ -45,33 +44,40 @@ var deployCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		defer log.Flush()
+		stx.EnsureVaultSession(config)
 
 		if flags.DeployDeps {
 			flags.DeploySave = true
 		}
 
 		availableStacks := make(map[string]deployArgs)
-
 		workingGraph := graph.NewGraph()
-		stx.EnsureVaultSession(config)
-
 		buildInstances := stx.GetBuildInstances(args, "cfn")
-		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
-			stacks, stacksErr := stx.GetStacks(cueValue, flags)
-			if stacksErr != nil {
-				log.Error(stacksErr)
-			}
 
-			if stacks == nil {
-				return
+		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
+			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)
+			if stacksIteratorErr != nil {
+				log.Fatal(stacksIteratorErr)
 			}
 
 			// since the Process handler generally only sees one stack per instance,
 			// we need to gather ALL the stacks first primarily to support dependencies
-			for stackName, stack := range stacks {
-				availableStacks[stackName] = deployArgs{stack: stack, buildInstance: buildInstance, cueInstance: cueInstance, cueValue: cueValue}
+			for stacksIterator.Next() {
+				stackValue := stacksIterator.Value()
+				var stack stx.Stack
+				decodeErr := stackValue.Decode(&stack)
+				if decodeErr != nil {
+					if flags.DeployDeps {
+						log.Fatal(decodeErr)
+					} else {
+						log.Error(decodeErr)
+						continue
+					}
+				}
+
+				availableStacks[stack.Name] = deployArgs{stack: stack, buildInstance: buildInstance, stackValue: stackValue}
 				if flags.DeployDeps {
-					workingGraph.AddNode(stackName, stack.DependsOn...)
+					workingGraph.AddNode(stack.Name, stack.DependsOn...)
 				}
 			}
 		})
@@ -84,23 +90,23 @@ var deployCmd = &cobra.Command{
 
 			for _, stackName := range resolved {
 				dplArgs := availableStacks[stackName]
-				deployStack(stackName, dplArgs.stack, dplArgs.buildInstance, dplArgs.cueValue)
+				deployStack(dplArgs.stack, dplArgs.buildInstance, dplArgs.stackValue)
 			}
 		} else {
-			for stackName, dplArgs := range availableStacks {
-				deployStack(stackName, dplArgs.stack, dplArgs.buildInstance, dplArgs.cueValue)
+			for _, dplArgs := range availableStacks {
+				deployStack(dplArgs.stack, dplArgs.buildInstance, dplArgs.stackValue)
 			}
 		}
 	},
 }
 
-func deployStack(stackName string, stack stx.Stack, buildInstance *build.Instance, cueValue cue.Value) {
+func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.Value) {
 
-	fileName, saveErr := saveStackAsYml(stackName, stack, buildInstance, cueValue)
+	fileName, saveErr := saveStackAsYml(stack, buildInstance, stackValue)
 	if saveErr != nil {
 		log.Error(saveErr)
 	}
-	log.Infof("%s %s %s %s:%s\n", au.White("Deploying"), au.Magenta(stackName), au.White("⤏"), au.Green(stack.Profile), au.Cyan(stack.Region))
+	log.Infof("%s %s %s %s:%s\n", au.White("Deploying"), au.Magenta(stack.Name), au.White("⤏"), au.Green(stack.Profile), au.Cyan(stack.Region))
 	log.Infof("%s", au.Gray(11, "  Validating template..."))
 
 	// get a session and cloudformation service client
@@ -132,15 +138,15 @@ func deployStack(stackName string, stack stx.Stack, buildInstance *build.Instanc
 	//log.Infof("%+v\n", validateTemplateOutput.String())
 
 	// look to see if stack exists
-	log.Debug("Describing", stackName)
-	describeStacksInput := cloudformation.DescribeStacksInput{StackName: &stackName}
+	log.Debug("Describing", stack.Name)
+	describeStacksInput := cloudformation.DescribeStacksInput{StackName: aws.String(stack.Name)}
 	_, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)
 
 	createChangeSetInput := cloudformation.CreateChangeSetInput{
 		Capabilities:  validateTemplateOutput.Capabilities,
-		ChangeSetName: &changeSetName, // I think AWS overuses pointers
-		StackName:     &stackName,
-		TemplateBody:  &templateBody,
+		ChangeSetName: aws.String(changeSetName), // I think AWS overuses pointers
+		StackName:     aws.String(stack.Name),
+		TemplateBody:  aws.String(templateBody),
 	}
 	changeSetType := "UPDATE" // default
 
@@ -170,7 +176,7 @@ func deployStack(stackName string, stack stx.Stack, buildInstance *build.Instanc
 		log.Check()
 
 		if flags.DeploySave {
-			saveErr := saveStackOutputs(buildInstance, stackName, stack)
+			saveErr := saveStackOutputs(buildInstance, stack)
 			if saveErr != nil {
 				log.Error(saveErr)
 			}
@@ -195,7 +201,7 @@ func deployStack(stackName string, stack stx.Stack, buildInstance *build.Instanc
 		log.Check()
 
 		if flags.DeploySave {
-			saveErr := saveStackOutputs(buildInstance, stackName, stack)
+			saveErr := saveStackOutputs(buildInstance, stack)
 			if saveErr != nil {
 				log.Error(saveErr)
 			}
@@ -240,8 +246,8 @@ func deployStack(stackName string, stack stx.Stack, buildInstance *build.Instanc
 	}
 
 	describeChangesetInput := cloudformation.DescribeChangeSetInput{
-		ChangeSetName: &changeSetName,
-		StackName:     &stackName,
+		ChangeSetName: aws.String(changeSetName),
+		StackName:     aws.String(stack.Name),
 	}
 
 	waitOption := request.WithWaiterDelay(request.ConstantWaiterDelay(5 * time.Second))
@@ -263,7 +269,7 @@ func deployStack(stackName string, stack stx.Stack, buildInstance *build.Instanc
 
 	if len(describeChangesetOuput.Changes) > 0 {
 		log.Infof("%+v\n", describeChangesetOuput.Changes)
-		diff(cfn, stackName, templateBody)
+		diff(cfn, stack.Name, templateBody)
 	} else {
 		log.Info("No changes to resources.")
 		return
@@ -280,11 +286,11 @@ func deployStack(stackName string, stack stx.Stack, buildInstance *build.Instanc
 	}
 
 	executeChangeSetInput := cloudformation.ExecuteChangeSetInput{
-		ChangeSetName: &changeSetName,
-		StackName:     &stackName,
+		ChangeSetName: aws.String(changeSetName),
+		StackName:     aws.String(stack.Name),
 	}
 
-	log.Infof("%s %s %s %s:%s\n", au.White("Executing"), au.BrightBlue(changeSetName), au.White("⤏"), au.Magenta(stackName), au.Cyan(stack.Region))
+	log.Infof("%s %s %s %s:%s\n", au.White("Executing"), au.BrightBlue(changeSetName), au.White("⤏"), au.Magenta(stack.Name), au.Cyan(stack.Region))
 
 	_, executeChangeSetErr := cfn.ExecuteChangeSet(&executeChangeSetInput)
 
@@ -298,7 +304,7 @@ func deployStack(stackName string, stack stx.Stack, buildInstance *build.Instanc
 		log.Check()
 
 		if flags.DeploySave {
-			saveErr := saveStackOutputs(buildInstance, stackName, stack)
+			saveErr := saveStackOutputs(buildInstance, stack)
 			if saveErr != nil {
 				log.Fatal(saveErr)
 			}

@@ -7,73 +7,24 @@ import (
 	"github.com/TangoGroup/stx/logger"
 )
 
-// Stack represents an individual stack
+// Stack represents the decoded value of stacks[stackname]
 type Stack struct {
 	Name, Profile, SopsProfile, Region, Environment, RegionCode string
 	DependsOn                                                   []string
 	Tags                                                        map[string]string
 }
 
-// Stacks represents the Go equivalent of the Cue Stacks pattern
-type Stacks map[string]Stack
-
-// GetStacks returns the (possibly filtered) stacks as decoded from the cue instance value,
-func GetStacks(cueValue cue.Value, flags Flags) (Stacks, error) {
-
-	stacks := make(Stacks)
-	filteredStacks := make(Stacks)
-
-	stacksCueValue := cueValue.Lookup("Stacks")
-	if !stacksCueValue.Exists() {
-		return nil, nil
-	}
-
-	decodeErr := stacksCueValue.Decode(&stacks)
-
-	if decodeErr != nil {
-		// evaluation errors (incomplete values, mismatched types, etc)
-		return nil, decodeErr
-	}
-
-	if len(stacks) <= 0 {
-		return nil, nil
-	}
-
-	log := logger.NewLogger(true, false)
-	// apply global flags here so individual commands dont have to
-	for stackName, stack := range stacks {
-
-		if flags.Environment != "" && stack.Environment != flags.Environment {
-			log.Debug("Filtering", stackName)
-			continue
-		}
-
-		if flags.RegionCode != "" && stack.RegionCode != flags.RegionCode {
-			log.Debug("Filtering", stackName)
-			continue
-		}
-
-		if flags.Profile != "" && stack.Profile != flags.Profile {
-			log.Debug("Filtering", stackName)
-			continue
-		}
-
-		log.Debug("Adding", stackName)
-		filteredStacks[stackName] = stack
-	}
-
-	return filteredStacks, nil
-}
-
 // StacksIterator is a wrapper around cue.Iterator that allows for filtering based on stack fields
 type StacksIterator struct {
 	cueIter cue.Iterator
 	flags   Flags
+	log     *logger.Logger
 }
 
 // NewStacksIterator returns *StacksIterator
-func NewStacksIterator(cueValue cue.Value, flags Flags) (*StacksIterator, error) {
-	stacks := cueValue.Lookup("Stacks")
+func NewStacksIterator(cueInstance *cue.Instance, flags Flags, log *logger.Logger) (*StacksIterator, error) {
+	log.Debug("Getting stacks...")
+	stacks := cueInstance.Value().Lookup("Stacks")
 	if !stacks.Exists() {
 		return nil, errors.New("Stacks is undefined")
 	}
@@ -83,7 +34,7 @@ func NewStacksIterator(cueValue cue.Value, flags Flags) (*StacksIterator, error)
 		return nil, fieldsErr
 	}
 
-	return &StacksIterator{cueIter: fields, flags: flags}, nil
+	return &StacksIterator{cueIter: fields, flags: flags, log: log}, nil
 }
 
 // Next moves the index forward and applies global filters. returns true if there is a value that passes the filters
@@ -103,6 +54,7 @@ func (it *StacksIterator) Next() bool {
 		}
 		environment, environmentErr := environmentValue.String()
 		if environmentErr != nil {
+			it.log.Error(environmentErr)
 			return it.Next()
 		}
 		if it.flags.Environment != environment {
@@ -117,6 +69,7 @@ func (it *StacksIterator) Next() bool {
 		}
 		regionCode, regionCodeErr := regionCodeValue.String()
 		if regionCodeErr != nil {
+			it.log.Error(regionCodeErr)
 			return it.Next()
 		}
 		if it.flags.RegionCode != regionCode {
@@ -131,6 +84,7 @@ func (it *StacksIterator) Next() bool {
 		}
 		profile, profileErr := profileValue.String()
 		if profileErr != nil {
+			it.log.Error(profileErr)
 			return it.Next()
 		}
 		if it.flags.Profile != profile {
