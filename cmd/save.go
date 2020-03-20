@@ -95,7 +95,7 @@ func saveStackOutputs(buildInstance *build.Instance, stack stx.Stack) error {
 	log.Infof("%s %s %s %s\n", au.White("Saving"), au.Magenta(stack.Name), au.White("⤏"), fileName)
 
 	// create the .out.cue file
-	cuePackage := filepath.Base(cueOutPath)
+	cuePackage := strings.Replace(filepath.Base(cueOutPath), "-", "", -1)
 	result := "package " + cuePackage + "\n\n\"" + stack.Name + "\": {\n"
 	// convert cloudformation outputs into simple key:value pairs
 	for _, output := range describeStacksOutput.Stacks[0].Outputs {
@@ -106,6 +106,7 @@ func saveStackOutputs(buildInstance *build.Instance, stack stx.Stack) error {
 	// use cue to format the output
 	cueOutput, cueOutputErr := format.Source([]byte(result))
 	if cueOutputErr != nil {
+		log.Debug(result)
 		return cueOutputErr
 	}
 
