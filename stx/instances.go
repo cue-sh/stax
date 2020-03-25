@@ -11,7 +11,7 @@ import (
 	"github.com/TangoGroup/stx/logger"
 )
 
-type instanceHandler func(*build.Instance, *cue.Instance, cue.Value)
+type instanceHandler func(*build.Instance, *cue.Instance)
 
 // GetBuildInstances loads and parses cue files and returns a list of build instances
 func GetBuildInstances(args []string, pkg string) []*build.Instance {
@@ -85,6 +85,6 @@ func Process(buildInstances []*build.Instance, flags Flags, log *logger.Logger, 
 		}
 
 		log.Debug("Executing handler...")
-		handler(buildInstance, cueInstance, cueInstance.Value())
+		handler(buildInstance, cueInstance)
 	}
 }

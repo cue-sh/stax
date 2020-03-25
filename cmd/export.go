@@ -7,8 +7,8 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
+	"cuelang.org/go/pkg/encoding/yaml"
 	"github.com/TangoGroup/stx/stx"
-	"github.com/ghodss/yaml"
 	"github.com/spf13/cobra"
 )
 
@@ -22,18 +22,21 @@ var exportCmd = &cobra.Command{
 
 		buildInstances := stx.GetBuildInstances(args, "cfn")
 
-		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
-			stacks, stacksErr := stx.GetStacks(cueValue, flags)
-			if stacksErr != nil {
-				log.Error(stacksErr)
+		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
+			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)
+			if stacksIteratorErr != nil {
+				log.Fatal(stacksIteratorErr)
 			}
 
-			if stacks == nil {
-				return
-			}
-
-			for stackName, stack := range stacks {
-				_, saveErr := saveStackAsYml(stackName, stack, buildInstance, cueValue)
+			for stacksIterator.Next() {
+				stackValue := stacksIterator.Value()
+				var stack stx.Stack
+				decodeErr := stackValue.Decode(&stack)
+				if decodeErr != nil {
+					log.Error(decodeErr)
+					continue
+				}
+				_, saveErr := saveStackAsYml(stack, buildInstance, stackValue)
 				if saveErr != nil {
 					log.Error(saveErr)
 				}
@@ -42,18 +45,18 @@ var exportCmd = &cobra.Command{
 	},
 }
 
-func saveStackAsYml(stackName string, stack stx.Stack, buildInstance *build.Instance, cueValue cue.Value) (string, error) {
+func saveStackAsYml(stack stx.Stack, buildInstance *build.Instance, stackValue cue.Value) (string, error) {
 	dir := filepath.Clean(config.CueRoot + "/" + config.Export.YmlPath + "/" + stack.Profile)
 	os.MkdirAll(dir, 0755)
 
-	fileName := dir + "/" + stackName + ".cfn.yml"
-	log.Infof("%s %s %s %s\n", au.White("Exported"), au.Magenta(stackName), au.White("⤏"), fileName)
-	template := cueValue.Lookup("Stacks", stackName, "Template")
+	fileName := dir + "/" + stack.Name + ".cfn.yml"
+	log.Infof("%s %s %s %s\n", au.White("Exported"), au.Magenta(stack.Name), au.White("⤏"), fileName)
+	template := stackValue.Lookup("Template")
 	yml, ymlErr := yaml.Marshal(template)
 	if ymlErr != nil {
 		return "", ymlErr
 	}
-	writeErr := ioutil.WriteFile(fileName, yml, 0644)
+	writeErr := ioutil.WriteFile(fileName, []byte(yml), 0644)
 	if writeErr != nil {
 		return "", writeErr
 	}

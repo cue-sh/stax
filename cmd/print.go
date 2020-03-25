@@ -27,45 +27,43 @@ var printCmd = &cobra.Command{
 		log.Debug("Getting build instances...")
 		buildInstances := stx.GetBuildInstances(args, "cfn")
 		log.Debug("Processing build instances...")
-		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
+		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
 
-			valueToMarshal := cueValue
-			log.Debug("Getting stacks...")
-			stacks, stacksErr := stx.GetStacks(cueValue, flags)
-			if stacksErr != nil && !flags.PrintHideErrors {
-				log.Error(stacksErr)
+			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)
+			if stacksIteratorErr != nil {
+				log.Fatal(stacksIteratorErr)
 			}
 
-			if stacks == nil {
-				return
-			}
+			log.Info(au.Cyan(buildInstance.DisplayPath))
+			for stacksIterator.Next() {
+				stackValue := stacksIterator.Value()
+				valueToMarshal := stackValue
+				path := []string{}
+				displayPath := ""
 
-			for stackName := range stacks {
-				var path []string
-				var displayPath string
 				if flags.PrintPath != "" {
-					path = []string{"Stacks", stackName}
+					log.Debug("Evaluating --path...")
 					path = append(path, strings.Split(flags.PrintPath, ".")...)
-					valueToMarshal = cueValue.Lookup(path...)
-					valueToMarshalErr := valueToMarshal.Err()
-					if valueToMarshalErr != nil {
-						// this just means the path didn't exist. not a real error
+					valueToMarshal = stackValue.Lookup(path...)
+					displayPath = strings.Join(path, ".") + ":"
+					if !valueToMarshal.Exists() {
+						log.Debug(displayPath, "not found")
 						continue
 					}
-					displayPath = strings.Join(path, ".") + ":\n"
+					log.Debug("Found", displayPath)
 				}
 
 				yml, ymlErr := yaml.Marshal(valueToMarshal)
-
+				stackName, _ := stackValue.Label()
+				log.Infof("%s%s\n", au.Magenta(stackName), au.Brown("."+displayPath))
 				if ymlErr != nil {
 					if !flags.PrintHideErrors {
-						log.Info(au.Cyan(buildInstance.DisplayPath))
 						log.Error(ymlErr)
 					}
 				} else {
 					if !flags.PrintOnlyErrors {
-						log.Info(au.Cyan(buildInstance.DisplayPath))
-						log.Infof("%s\n", displayPath+string(yml))
+						ymlStr := strings.Replace(string(yml), "\n", "\n  ", -1)
+						log.Infof("  %s\n", ymlStr)
 					}
 				}
 			}
