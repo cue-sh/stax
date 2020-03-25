@@ -34,9 +34,21 @@ var printCmd = &cobra.Command{
 				log.Fatal(stacksIteratorErr)
 			}
 
-			log.Info(au.Cyan(buildInstance.DisplayPath))
+			if !flags.PrintHidePath {
+				log.Info(au.Cyan(buildInstance.DisplayPath))
+			}
+
 			for stacksIterator.Next() {
 				stackValue := stacksIterator.Value()
+				var stack stx.Stack
+				decodeErr := stackValue.Decode(&stack)
+				if decodeErr != nil {
+					if !flags.PrintHideErrors {
+						log.Error(decodeErr)
+					}
+					continue
+				}
+
 				valueToMarshal := stackValue
 				path := []string{}
 				displayPath := ""
@@ -54,8 +66,16 @@ var printCmd = &cobra.Command{
 				}
 
 				yml, ymlErr := yaml.Marshal(valueToMarshal)
-				stackName, _ := stackValue.Label()
-				log.Infof("%s%s\n", au.Magenta(stackName), au.Brown("."+displayPath))
+				if displayPath != "" {
+					log.Infof("%s%s\n", au.Magenta(stack.Name), au.Brown("."+displayPath))
+				} else {
+					log.Infof("%s\n", au.Magenta(stack.Name))
+				}
+
+				if flags.PrintOnlyNames {
+					continue
+				}
+
 				if ymlErr != nil {
 					if !flags.PrintHideErrors {
 						log.Error(ymlErr)
@@ -74,8 +94,10 @@ var printCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(printCmd)
 
+	printCmd.Flags().BoolVar(&flags.PrintOnlyNames, "only-names", false, "Only print stack names.")
 	printCmd.Flags().BoolVar(&flags.PrintOnlyErrors, "only-errors", false, "Only print errors. Cannot be used in concjunction with --hide-errors")
 	printCmd.Flags().BoolVar(&flags.PrintHideErrors, "hide-errors", false, "Hide errors. Cannot be used in concjunction with --only-errors")
+	printCmd.Flags().BoolVar(&flags.PrintHidePath, "hide-path", false, "Hide instance path.")
 	printCmd.Flags().StringVarP(&flags.PrintPath, "path", "p", "", "Dot-notation style path to key to print. Eg: Template.Resources.Alb or Template.Outputs")
 
 }
