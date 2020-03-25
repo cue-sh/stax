@@ -59,7 +59,7 @@ func Process(buildInstances []*build.Instance, flags Flags, log *logger.Logger, 
 		}
 	}
 
-	log.Debug("Iterating build instances...")
+	log.Debug("Iterating", len(buildInstances), "build instances...")
 	for _, buildInstance := range buildInstances {
 		if excludeRegexp != nil && excludeRegexp.MatchString(buildInstance.DisplayPath) {
 			log.Debug("Excluded via --exlude: ", buildInstance.DisplayPath)
