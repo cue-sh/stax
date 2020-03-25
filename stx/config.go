@@ -14,8 +14,8 @@ import (
 
 // Flags holds flags passed in from cli
 type Flags struct {
-	Environment, Profile, RegionCode, Exclude, Include, PrintPath                        string
-	Debug, NoColor, PrintOnlyErrors, PrintHideErrors, DeployWait, DeploySave, DeployDeps bool
+	Environment, Profile, RegionCode, Exclude, Include, PrintPath                                                       string
+	Debug, NoColor, PrintOnlyErrors, PrintHideErrors, PrintOnlyNames, PrintHidePath, DeployWait, DeploySave, DeployDeps bool
 }
 
 const configCue = `package stx
@@ -107,6 +107,6 @@ func LoadConfig(log *logger.Logger) *Config {
 	if decodeErr != nil {
 		log.Fatal("Config decode error", decodeErr.Error())
 	}
-	log.Debugf("Loaded config %+v", cfg)
+	log.Debugf("Loaded config %+v\n", cfg)
 	return &cfg
 }
