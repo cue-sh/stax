@@ -24,6 +24,10 @@ var printCmd = &cobra.Command{
 		if flags.PrintOnlyErrors && flags.PrintHideErrors {
 			log.Fatal("Cannot show only errors while hiding them.")
 		}
+		if flags.PrintOnlyPaths && flags.PrintHidePath {
+			log.Fatal("Cannot show only paths while hiding them.")
+		}
+
 		log.Debug("Getting build instances...")
 		buildInstances := stx.GetBuildInstances(args, "cfn")
 		log.Debug("Processing build instances...")
@@ -36,6 +40,10 @@ var printCmd = &cobra.Command{
 
 			if !flags.PrintHidePath {
 				log.Info(au.Cyan(buildInstance.DisplayPath))
+			}
+
+			if flags.PrintOnlyPaths {
+				return
 			}
 
 			for stacksIterator.Next() {
@@ -94,7 +102,8 @@ var printCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(printCmd)
 
-	printCmd.Flags().BoolVar(&flags.PrintOnlyNames, "only-names", false, "Only print stack names.")
+	printCmd.Flags().BoolVar(&flags.PrintOnlyNames, "only-names", false, "Only print stack names. Cannot be used in conjunction with --only-paths.")
+	printCmd.Flags().BoolVar(&flags.PrintOnlyPaths, "only-paths", false, "Only print stack paths. Cannot be used in conjunction with --only-names.")
 	printCmd.Flags().BoolVar(&flags.PrintOnlyErrors, "only-errors", false, "Only print errors. Cannot be used in concjunction with --hide-errors")
 	printCmd.Flags().BoolVar(&flags.PrintHideErrors, "hide-errors", false, "Hide errors. Cannot be used in concjunction with --only-errors")
 	printCmd.Flags().BoolVar(&flags.PrintHidePath, "hide-path", false, "Hide instance path.")
