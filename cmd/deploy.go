@@ -269,11 +269,9 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 
 	if len(describeChangesetOuput.Changes) > 0 {
 		log.Infof("%+v\n", describeChangesetOuput.Changes)
-		diff(cfn, stack.Name, templateBody)
-	} else {
-		log.Info("No changes to resources.")
-		return
 	}
+
+	diff(cfn, stack.Name, templateBody)
 
 	log.Infof("%s %s\n▶︎", au.BrightBlue("Execute change set?"), "Y to execute. Anything else to cancel.")
 	var input string
