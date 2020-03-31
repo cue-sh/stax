@@ -20,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/joho/godotenv"
+	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
@@ -299,7 +300,37 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 	}
 
 	if len(describeChangesetOuput.Changes) > 0 {
-		log.Infof("%+v\n", describeChangesetOuput.Changes)
+		// log.Infof("%+v\n", describeChangesetOuput.Changes)
+		table := tablewriter.NewWriter(os.Stdout)
+		table.SetAutoWrapText(false)
+		table.SetAutoMergeCells(true)
+		table.SetRowLine(true)
+		table.SetHeader([]string{"Resource", "Action", "Attribute", "Property", "Recreation"})
+		table.SetHeaderColor(tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor})
+
+		for _, change := range describeChangesetOuput.Changes {
+
+			row := []string{
+				aws.StringValue(change.ResourceChange.LogicalResourceId),
+				aws.StringValue(change.ResourceChange.Action),
+				"",
+				"",
+				"",
+			}
+			for _, detail := range change.ResourceChange.Details {
+				row[2] = aws.StringValue(detail.Target.Attribute)
+				row[3] = aws.StringValue(detail.Target.Name)
+				recreation := aws.StringValue(detail.Target.RequiresRecreation)
+
+				if recreation == "ALWAYS" || recreation == "CONDITIONAL" {
+					row[4] = au.Red(recreation).String()
+				} else {
+					row[4] = recreation
+				}
+			}
+			table.Append(row)
+		}
+		table.Render()
 	}
 
 	diff(cfn, stack.Name, templateBody)
