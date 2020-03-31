@@ -215,7 +215,10 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 		}
 	} else {
 		// deploy using previous values
-		stackParameters, _ := stackValue.Lookup("Template", "Parameters").Fields()
+		stackParameters, stackParametersErr := stackValue.Lookup("Template", "Parameters").Fields()
+		if stackParametersErr != nil {
+			log.Fatal(stackParametersErr)
+		}
 		for stackParameters.Next() {
 			stackParam := stackParameters.Value()
 			key, _ := stackParam.Label()
