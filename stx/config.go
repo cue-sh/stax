@@ -14,8 +14,10 @@ import (
 
 // Flags holds flags passed in from cli
 type Flags struct {
-	Environment, Profile, RegionCode, Exclude, Include, PrintPath                                                                       string
-	Debug, NoColor, PrintOnlyErrors, PrintHideErrors, PrintOnlyNames, PrintHidePath, PrintOnlyPaths, DeployWait, DeploySave, DeployDeps bool
+	Environment, Profile, RegionCode, Exclude, Include, PrintPath                   string
+	Debug, NoColor                                                                  bool
+	PrintOnlyErrors, PrintHideErrors, PrintOnlyNames, PrintHidePath, PrintOnlyPaths bool
+	DeployWait, DeploySave, DeployDeps, DeployPrevious                              bool
 }
 
 const configCue = `package stx
