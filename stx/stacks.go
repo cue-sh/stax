@@ -2,6 +2,7 @@ package stx
 
 import (
 	"errors"
+	"regexp"
 
 	"cuelang.org/go/cue"
 	"github.com/TangoGroup/stx/logger"
@@ -44,7 +45,20 @@ func (it *StacksIterator) Next() bool {
 	}
 
 	currentValue := it.cueIter.Value()
-	// currentLabel, _ := currentValue.Label()
+	if it.flags.StackNameRegexPattern != "" {
+		stackName, _ := currentValue.Label()
+		var stackNameRegexp *regexp.Regexp
+		var stackNameRegexpErr error
+
+		it.log.Debug("Compiling --stacks regexp...")
+		stackNameRegexp, stackNameRegexpErr = regexp.Compile(it.flags.StackNameRegexPattern)
+		if stackNameRegexpErr != nil {
+			it.log.Fatal(stackNameRegexpErr)
+		}
+		if !stackNameRegexp.MatchString(stackName) {
+			return it.Next()
+		}
+	}
 
 	// apply filters to the current value
 	if it.flags.Environment != "" {
