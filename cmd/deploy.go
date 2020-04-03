@@ -20,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/joho/godotenv"
+	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
@@ -28,6 +29,7 @@ func init() {
 	deployCmd.Flags().BoolVarP(&flags.DeployWait, "wait", "w", false, "Wait for stack updates to complete before continuing.")
 	deployCmd.Flags().BoolVarP(&flags.DeploySave, "save", "s", false, "Save stack outputs upon successful completion. Implies --wait.")
 	deployCmd.Flags().BoolVarP(&flags.DeployDeps, "dependencies", "d", false, "Deploy stack dependencies in order. Implies --save.")
+	deployCmd.Flags().BoolVarP(&flags.DeployPrevious, "previous-values", "v", false, "Deploy stack using previous parameter values.")
 }
 
 type deployArgs struct {
@@ -157,63 +159,93 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 	createChangeSetInput.ChangeSetType = &changeSetType
 
 	parametersMap := make(map[string]string)
-	// look for secrets file
-	secretsPath := filepath.Clean(buildInstance.DisplayPath + "/secrets.env")
-	if _, err := os.Stat(secretsPath); !os.IsNotExist(err) {
-		log.Infof("%s", au.Gray(11, "  Decrypting secrets..."))
 
-		secrets, secretsErr := stx.DecryptSecrets(secretsPath, stack.SopsProfile)
+	if !flags.DeployPrevious {
+		// look for secrets file
+		secretsPath := filepath.Clean(buildInstance.DisplayPath + "/secrets.env")
+		if _, err := os.Stat(secretsPath); !os.IsNotExist(err) {
+			if !flags.DeployPrevious {
+				log.Infof("%s", au.Gray(11, "  Decrypting secrets..."))
+			}
 
-		if secretsErr != nil {
-			log.Error(secretsErr)
-			return
-		}
+			secrets, secretsErr := stx.DecryptSecrets(secretsPath, stack.SopsProfile)
 
-		for k, v := range secrets {
-			parametersMap[k] = v
-		}
+			if secretsErr != nil {
+				log.Error(secretsErr)
+				return
+			}
 
-		log.Check()
+			for k, v := range secrets {
+				parametersMap[k] = v
+			}
 
-		if flags.DeploySave {
-			saveErr := saveStackOutputs(buildInstance, stack)
-			if saveErr != nil {
-				log.Error(saveErr)
+			log.Check()
+
+			if flags.DeploySave {
+				saveErr := saveStackOutputs(buildInstance, stack)
+				if saveErr != nil {
+					log.Error(saveErr)
+				}
 			}
 		}
-	}
 
-	paramsPath := filepath.Clean(buildInstance.DisplayPath + "/params.env")
-	if _, err := os.Stat(paramsPath); !os.IsNotExist(err) {
-		log.Infof("%s", au.Gray(11, "  Loading params..."))
+		paramsPath := filepath.Clean(buildInstance.DisplayPath + "/params.env")
+		if _, err := os.Stat(paramsPath); !os.IsNotExist(err) {
 
-		myEnv, err := godotenv.Read(paramsPath)
+			log.Infof("%s", au.Gray(11, "  Loading parameters..."))
 
-		if err != nil {
-			log.Error(err)
-			return
-		}
+			myEnv, err := godotenv.Read(paramsPath)
 
-		for k, v := range myEnv {
-			parametersMap[k] = v
-		}
-
-		log.Check()
-
-		if flags.DeploySave {
-			saveErr := saveStackOutputs(buildInstance, stack)
-			if saveErr != nil {
-				log.Error(saveErr)
+			if err != nil {
+				log.Error(err)
+				return
 			}
+
+			for k, v := range myEnv {
+				parametersMap[k] = v
+			}
+
+			log.Check()
+
+			if flags.DeploySave {
+				saveErr := saveStackOutputs(buildInstance, stack)
+				if saveErr != nil {
+					log.Error(saveErr)
+				}
+			}
+		}
+	} else {
+		// deploy using previous values
+		stackParameters, stackParametersErr := stackValue.Lookup("Template", "Parameters").Fields()
+		if stackParametersErr != nil {
+			log.Fatal(stackParametersErr)
+		}
+		for stackParameters.Next() {
+			stackParam := stackParameters.Value()
+			key, _ := stackParam.Label()
+			parametersMap[key] = ""
 		}
 	}
 
 	var parameters []*cloudformation.Parameter
 
+	if flags.DeployPrevious {
+		log.Infof("%s", au.Gray(11, "  Using previous parameters..."))
+		log.Check()
+	}
+
 	for paramKey, paramVal := range parametersMap {
 		myKey := paramKey
 		myValue := paramVal
-		parameters = append(parameters, &cloudformation.Parameter{ParameterKey: &myKey, ParameterValue: &myValue})
+		parameter := cloudformation.Parameter{ParameterKey: aws.String(myKey)}
+
+		if flags.DeployPrevious {
+			parameter.SetUsePreviousValue(true)
+		} else {
+			parameter.ParameterValue = aws.String(myValue)
+		}
+
+		parameters = append(parameters, &parameter)
 	}
 
 	createChangeSetInput.SetParameters(parameters)
@@ -268,7 +300,37 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 	}
 
 	if len(describeChangesetOuput.Changes) > 0 {
-		log.Infof("%+v\n", describeChangesetOuput.Changes)
+		// log.Infof("%+v\n", describeChangesetOuput.Changes)
+		table := tablewriter.NewWriter(os.Stdout)
+		table.SetAutoWrapText(false)
+		table.SetAutoMergeCells(true)
+		table.SetRowLine(true)
+		table.SetHeader([]string{"Resource", "Action", "Attribute", "Property", "Recreation"})
+		table.SetHeaderColor(tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor})
+
+		for _, change := range describeChangesetOuput.Changes {
+
+			row := []string{
+				aws.StringValue(change.ResourceChange.LogicalResourceId),
+				aws.StringValue(change.ResourceChange.Action),
+				"",
+				"",
+				"",
+			}
+			for _, detail := range change.ResourceChange.Details {
+				row[2] = aws.StringValue(detail.Target.Attribute)
+				row[3] = aws.StringValue(detail.Target.Name)
+				recreation := aws.StringValue(detail.Target.RequiresRecreation)
+
+				if recreation == "ALWAYS" || recreation == "CONDITIONAL" {
+					row[4] = au.Red(recreation).String()
+				} else {
+					row[4] = recreation
+				}
+			}
+			table.Append(row)
+		}
+		table.Render()
 	}
 
 	diff(cfn, stack.Name, templateBody)

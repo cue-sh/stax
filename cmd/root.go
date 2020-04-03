@@ -53,6 +53,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&flags.RegionCode, "region-code", "r", "", "Includes only stacks with this region code")
 	rootCmd.PersistentFlags().StringVar(&flags.Exclude, "exclude", "", "Excludes subdirectory paths matching this regular expression.")
 	rootCmd.PersistentFlags().StringVar(&flags.Include, "include", "", "Includes subdirectory paths matching this regular expression.")
+	rootCmd.PersistentFlags().StringVar(&flags.StackNameRegexPattern, "stacks", "", "Includes only stacks whose name matches this regular expression.")
 	rootCmd.PersistentFlags().BoolVar(&flags.Debug, "debug", false, "Enables verbose output of debug level messages.")
 	rootCmd.PersistentFlags().BoolVar(&flags.NoColor, "no-color", false, "Disables color output.")
 }
