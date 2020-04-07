@@ -60,7 +60,7 @@ The following global flags are ignored:
 
 		path := filepath.Dir(pathToTemplate)
 		os.MkdirAll(path, 0766)
-		log.Info(filepath.Base(pathToTemplate))
+
 		writeErr := ioutil.WriteFile(pathToTemplate, []byte(output), 0655)
 		if writeErr != nil {
 			log.Fatal(writeErr)
