@@ -58,13 +58,12 @@ var statusCmd = &cobra.Command{
 				table.SetHeader([]string{"Stackname", "Status", "Created", "Updated", "Reason"})
 				table.SetHeaderColor(tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor}, tablewriter.Colors{tablewriter.FgWhiteColor})
 
-				if strings.Contains(status, "COMPLETE") {
+				if strings.Contains(status, "FAIL") || strings.Contains(status, "ROLLBACK") {
+					status = au.Red(status).String()
+				} else if strings.Contains(status, "COMPLETE") {
 					status = au.BrightGreen(status).String()
 				}
 
-				if strings.Contains(status, "FAIL") || strings.Contains(status, "ROLLBACK") {
-					status = au.Red(status).String()
-				}
 				table.Append([]string{au.Magenta(stack.Name).String(), status, describedStack.CreationTime.Local().String(), describedStack.LastUpdatedTime.Local().String(), aws.StringValue(describedStack.StackStatusReason)})
 				table.Render()
 			}
