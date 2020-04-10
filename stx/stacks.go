@@ -17,7 +17,7 @@ type Stack struct {
 
 // StacksIterator is a wrapper around cue.Iterator that allows for filtering based on stack fields
 type StacksIterator struct {
-	cueIter *cue.Iterator
+	cueIter cue.Iterator
 	flags   Flags
 	log     *logger.Logger
 }

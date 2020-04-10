@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"cuelang.org/go/cue/format"
 	"cuelang.org/go/encoding/json"
 	"github.com/TangoGroup/stx/stx"
 	"github.com/aws/aws-sdk-go/aws"
@@ -58,7 +59,19 @@ var importCmd = &cobra.Command{
 			}
 		}
 
-		templateErr := createTemplate(args, string(templateBytes))
+		expr, extractErr := json.Extract("", templateBytes)
+		if extractErr != nil {
+			log.Error(extractErr)
+			return
+		}
+
+		result, formatErr := format.Node(expr, format.Simplify())
+		if formatErr != nil {
+			log.Error(formatErr)
+			return
+		}
+
+		templateErr := createTemplate(args, string(result))
 		if templateErr != nil {
 			log.Error(templateErr)
 		}
