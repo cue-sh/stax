@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"cuelang.org/go/cue/format"
 	"github.com/spf13/cobra"
 )
 
@@ -16,15 +17,13 @@ func init() {
 const scaffold = `package cfn
 
 Stacks: {
+	${STX::ImportedStack}
 	[StackName= =~"${STX::StackNameRegexPattern}"]: {
 		stack=Stacks[StackName]
 		Profile: "${STX::Profile}"
 		Environment: "${STX::Environment}"
 		RegionCode: "${STX::RegionCode}"
-		Template: {
-			Outputs: {}
-			Resources: {}
-		}
+		Template: ${STX::Template}
 	}	
 }`
 
@@ -45,25 +44,47 @@ The following global flags are ignored:
 --exclude`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		var pathToTemplate string
-
-		output := strings.Replace(scaffold, "${STX::StackNameRegexPattern}", flags.StackNameRegexPattern, 1)
-		output = strings.Replace(output, "${STX::Profile}", flags.Profile, 1)
-		output = strings.Replace(output, "${STX::Environment}", flags.Environment, 1)
-		output = strings.Replace(output, "${STX::RegionCode}", flags.RegionCode, 1)
-
-		if len(args) < 1 {
-			pathToTemplate = "./template.cfn.cue"
-		} else {
-			pathToTemplate = args[0]
-		}
-
-		path := filepath.Dir(pathToTemplate)
-		os.MkdirAll(path, 0766)
-
-		writeErr := ioutil.WriteFile(pathToTemplate, []byte(output), 0655)
-		if writeErr != nil {
-			log.Fatal(writeErr)
+		defer log.Flush()
+		scaffoldTemplateDefault := `{
+			Outputs: {}
+			Resources: {}
+}`
+		templateErr := createTemplate(args, scaffoldTemplateDefault)
+		if templateErr != nil {
+			log.Error(templateErr)
 		}
 	},
+}
+
+func createTemplate(args []string, template string) error {
+	var pathToTemplate string
+
+	output := strings.Replace(scaffold, "${STX::StackNameRegexPattern}", flags.StackNameRegexPattern, 1)
+	output = strings.Replace(output, "${STX::Profile}", flags.Profile, 1)
+	output = strings.Replace(output, "${STX::Environment}", flags.Environment, 1)
+	output = strings.Replace(output, "${STX::RegionCode}", flags.RegionCode, 1)
+	output = strings.Replace(output, "${STX::ImportedStack}", "\""+flags.ImportStack+"\": {}", 1)
+
+	output = strings.Replace(output, "${STX::Template}", template, 1)
+
+	if len(args) < 1 {
+		pathToTemplate = "./template.cfn.cue"
+	} else {
+		pathToTemplate = args[0]
+	}
+
+	path := filepath.Dir(pathToTemplate)
+	os.MkdirAll(path, 0766)
+
+	cueOutput, cueOutputErr := format.Source([]byte(output), format.Simplify())
+	if cueOutputErr != nil {
+		return cueOutputErr
+	}
+
+	writeErr := ioutil.WriteFile(pathToTemplate, cueOutput, 0655)
+	if writeErr != nil {
+		return writeErr
+	}
+
+	return nil
 }

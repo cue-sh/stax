@@ -104,7 +104,7 @@ func saveStackOutputs(buildInstance *build.Instance, stack stx.Stack) error {
 	result += "}\n"
 
 	// use cue to format the output
-	cueOutput, cueOutputErr := format.Source([]byte(result))
+	cueOutput, cueOutputErr := format.Source([]byte(result), format.Simplify())
 	if cueOutputErr != nil {
 		log.Debug(result)
 		return cueOutputErr

@@ -104,3 +104,8 @@ func (l *Logger) Flush() {
 		os.Exit(l.errors)
 	}
 }
+
+// NumErrors returns the number of errors counted so far
+func (l *Logger) NumErrors() int {
+	return l.errors
+}
