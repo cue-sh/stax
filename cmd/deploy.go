@@ -19,6 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/joho/godotenv"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -114,7 +115,8 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 	// get a session and cloudformation service client
 	log.Debugf("\nGetting session for profile %s\n", stack.Profile)
 	session := stx.GetSession(stack.Profile)
-	cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
+	awsCfg := aws.NewConfig().WithRegion(stack.Region)
+	cfn := cloudformation.New(session, awsCfg)
 
 	// read template from disk
 	log.Debug("Reading template from", fileName)
@@ -150,6 +152,7 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 		StackName:     aws.String(stack.Name),
 		TemplateBody:  aws.String(templateBody),
 	}
+
 	changeSetType := "UPDATE" // default
 
 	// if stack does not exist set action to CREATE
@@ -267,6 +270,22 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 			tags = append(tags, &cloudformation.Tag{Key: &tagK, Value: &tagV})
 		}
 		createChangeSetInput.SetTags(tags)
+	}
+	if config.Cmd.Deploy.Notify.TopicArn != "" { // && stx notify command is running! perhaps use unix domain sockets to test
+		log.Infof("%s", au.Gray(11, "  Reticulating splines..."))
+
+		snsClient := sns.New(session, awsCfg)
+
+		subscribeInput := sns.SubscribeInput{Endpoint: aws.String(config.Cmd.Deploy.Notify.Endpoint), TopicArn: aws.String(config.Cmd.Deploy.Notify.TopicArn), Protocol: aws.String("http")}
+		_, subscribeErr := snsClient.Subscribe(&subscribeInput)
+		if subscribeErr != nil {
+			log.Errorf("%s\n", subscribeErr)
+		} else {
+			var notificationArns []*string
+			notificationArns = append(notificationArns, aws.String(config.Cmd.Deploy.Notify.TopicArn))
+			createChangeSetInput.SetNotificationARNs(notificationArns)
+			log.Check()
+		}
 	}
 
 	log.Infof("%s", au.Gray(11, "  Creating changeset..."))

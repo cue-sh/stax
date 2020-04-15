@@ -25,7 +25,15 @@ Auth: {
 	AwsVault: SourceProfile: string | *""
 	Ykman: Profile: string | *""
 }
-Export: YmlPath: string | *"./yml"
+Cmd: {
+	Export: YmlPath: string | *"./yml"
+	Deploy: {
+		Notify: {
+			Endpoint: string | *""
+			TopicArn: string | *""
+		}
+	}
+}
 `
 
 // Config holds config values parsed from config.stx.cue files
@@ -40,8 +48,15 @@ type Config struct {
 			Profile string
 		}
 	}
-	Export struct {
-		YmlPath string
+	Cmd struct {
+		Export struct {
+			YmlPath string
+		}
+		Deploy struct {
+			Notify struct {
+				Endpoint, TopicArn string
+			}
+		}
 	}
 }
 

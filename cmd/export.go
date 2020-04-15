@@ -46,7 +46,7 @@ var exportCmd = &cobra.Command{
 }
 
 func saveStackAsYml(stack stx.Stack, buildInstance *build.Instance, stackValue cue.Value) (string, error) {
-	dir := filepath.Clean(config.CueRoot + "/" + config.Export.YmlPath + "/" + stack.Profile)
+	dir := filepath.Clean(config.CueRoot + "/" + config.Cmd.Export.YmlPath + "/" + stack.Profile)
 	os.MkdirAll(dir, 0755)
 
 	fileName := dir + "/" + stack.Name + ".cfn.yml"

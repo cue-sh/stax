@@ -12,8 +12,10 @@ require (
 	github.com/google/martian v2.1.0+incompatible
 	github.com/homeport/dyff v1.0.2
 	github.com/joho/godotenv v1.3.0
+	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381
 	github.com/olekukonko/tablewriter v0.0.4
+	github.com/rdegges/go-ipify v0.0.0-20150526035502-2d94a6a86c40
 	github.com/spf13/cobra v0.0.7
 	go.mozilla.org/sops/v3 v3.5.0
 )
