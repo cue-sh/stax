@@ -33,18 +33,19 @@ file is found, stx will use the path of the concrete leaf, relative to cue root.
 As an example, consider the following tree:
 
 infrastructure/
-|-cue                                      ("cue root")
-| |-cue.mod
-| | |-usr/cfn.out/vpc/dev-vpc-usw2.out.cue (outputs file)
-| |-vpc
-| | |-template.cfn.cue                     (template)
+|-cue/                                      ("cue root")
+| |-cue.mod/
+| | |-usr/cfn.out/vpc/dev-vpc-usw2.out.cue  (outputs file)
+| |-vpc/
+| | |-template.cfn.cue                      (template)
 
-Running stx save from infrastructure/cue/vpc will find the stack "dev-vpc-usw2"
+Running stx save from infrastructure/cue/vpc/ will find the stack "dev-vpc-usw2"
 defined in the template.cfn.cue file. stx will use vpc/ as the path relative to
-cue root, to create vpc/ as the path relative to cfn.out.
+cue root to create vpc/ as the path relative to cfn.out.
 
 The outputs file in this example will declare its cue package as "vpc" since
-that is the folder in which it is contained.
+that is the folder in which it is contained. Note that special characters such
+as spaces or hyphens will be removed from folder and package names.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 

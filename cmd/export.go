@@ -21,20 +21,19 @@ var exportCmd = &cobra.Command{
 The following config.stx.cue options are avilable:
 
 Cmd: {
-	Export: YmlPath: string | *"./yml"
+  Export: YmlPath: string | *"./yml"
 }
 
 The YmlPath is a path relative to the cue root. The cue root is the folder that
-contains the cue.mod folder. For example, to store files according to the
-following tree, set Cmd: Export: YmlPath: "../yml/cloudformation"
+contains the cue.mod folder. For example, to store exported yml files according
+to the following tree, set Cmd:Export:YmlPath: "../yml/cloudformation"
 
 infrastructure/
-|-cue
-| |-cue.mod
+|-cue/              ("cue root")
+| |-cue.mod/
 | ...
-|-yml
-	|-cloudformation
-
+|-yml/
+| |-cloudformation/
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		defer log.Flush()
