@@ -16,9 +16,19 @@ If no args are present after <command>, stx will default to using `./...` as a w
 
 ### Commands
 
-- `print` behaves like `cue export -out yml` but highlights errors, and the folders being evaluated
-- `xpt` saves stacks to disk. See `config.stx.cue` for setting `Xpt: YmlPath:`
-- `dpl` creates a changeset, previews changes, and prompts to execute
+- `add`        Writes scaffolding to template.cfn.cue
+- `delete`     Deletes the stack along with .yml and .out.cue files
+- `deploy`     Deploys a stack by creating a changeset, previews expected changes, and optionally executes.
+- `diff`       DIFF against CloudFormation for the evaluted leaves.
+- `events`     Shows the latest events from the evaluated stacks.
+- `export`     Exports cue templates that implement the Stack pattern as yml files.
+- `help`       Help about any command
+- `import`     Imports an existing stack into Cue.
+- `print`      Prints the Cue output as YAML
+- `resources`  Lists the resources managed by the stack.
+- `save`       Saves stack outputs as importable libraries to cue.mod
+- `status`     Returns a stack status if it exists
+- `notify`     Creates a light http server to listen for stack events from sns
 
 ### Roadmap
 
