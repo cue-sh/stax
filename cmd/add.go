@@ -30,8 +30,10 @@ Stacks: {
 // addCmd represents the add command
 var addCmd = &cobra.Command{
 	Use:   "add [path/to/template.cfn.cue]",
-	Short: "Writes scaffolding to template.cfn.cue",
-	Long: `Path to template will default to ./template.cfn.cue
+	Short: "Writes scaffolding to the provided path.",
+	Long: `add operates on a single stack provided as the path argument.
+	
+Path to template will default to ./template.cfn.cue
 	
 The following global flags will be used as so:
 --stacks will be used as a regular expression in the template: Stacks: [=~"<stacks>"]

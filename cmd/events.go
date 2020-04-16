@@ -17,7 +17,9 @@ import (
 var eventsCmd = &cobra.Command{
 	Use:   "events",
 	Short: "Shows the latest events from the evaluated stacks.",
-	Long:  `Yaba daba doo.`,
+	Long: `Events operates on every stack found in the evaluated cue files.
+	
+For each stack, events will query CloudFormation and return a list of events.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO add debug messages
 		defer log.Flush()

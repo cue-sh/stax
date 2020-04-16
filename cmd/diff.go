@@ -18,8 +18,15 @@ import (
 // exeCmd represents the exe command
 var diffCmd = &cobra.Command{
 	Use:   "diff",
-	Short: "DIFF against CloudFormation for the evaluted leaves.",
-	Long:  `Yada yada yada.`,
+	Short: "Diff against the current CloudFormation template.",
+	Long: `Diff will operate upon every stack found among the evaluated cue files.
+	
+For each stack, diff will first export the stack, download the template stored
+in CloudFormation, then produce a rich, functional, property-based diff (not 
+text-based) against the two templates.
+
+Diff is an implementation of https://github.com/homeport/dyff
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		defer log.Flush()

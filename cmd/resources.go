@@ -21,7 +21,11 @@ func init() {
 var resourcesCmd = &cobra.Command{
 	Use:   "resources",
 	Short: "Lists the resources managed by the stack.",
-	Long:  `Yada yada yada.`,
+	Long: `Resources operates on every stack found in the evaluated cue files.
+	
+For each stack, resources will query CloudFormation and return a list of all
+resources currently managed in the stack.
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		// TODO add debug messages

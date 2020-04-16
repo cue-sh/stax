@@ -15,8 +15,26 @@ import (
 // exportCmd represents the export command
 var exportCmd = &cobra.Command{
 	Use:   "export",
-	Short: "Exports cue templates that implement the Stack pattern as yml files.",
-	Long:  `Yada yada yada.`,
+	Short: "Exports cue templates as CloudFormation yml files.",
+	Long: `Export will operate over every stack found in the evaluated cue files.
+	
+The following config.stx.cue options are avilable:
+
+Cmd: {
+  Export: YmlPath: string | *"./yml"
+}
+
+The YmlPath is a path relative to the cue root. The cue root is the folder that
+contains the cue.mod folder. For example, to store exported yml files according
+to the following tree, set Cmd:Export:YmlPath: "../yml/cloudformation"
+
+infrastructure/
+|-cue/              ("cue root")
+| |-cue.mod/
+| ...
+|-yml/
+| |-cloudformation/
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		defer log.Flush()
 
