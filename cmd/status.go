@@ -15,8 +15,12 @@ import (
 
 var statusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "Returns a stack status if it exists",
-	Long:  `How long...?`,
+	Short: "Returns a stack status for each stack",
+	Long: `status operates on every stack found in the evaluated cue file.
+
+For each stack, status will query CloudFormation and return the current status.
+If the stack does not exist status will return an error.
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		//TODO add debug messages
 		log.Debug("status command executing...")

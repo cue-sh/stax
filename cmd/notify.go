@@ -23,8 +23,14 @@ func init() {
 // notifyCmd represents the notify command
 var notifyCmd = &cobra.Command{
 	Use:   "notify",
-	Short: "Listen for stack notifications coming from the supplied notification arn",
-	Long:  `Yada yada yada.`,
+	Short: "Listen for stack events sent via SNS.",
+	Long: `Notify does not operate on any stack. Instead it creates a very
+light-weight http server dedicated to displaying stack events sent through SNS.
+
+To use notify, first start the server by executing the command; no options are 
+required. Notify will immediately return the http endpoint on which it is listening.
+Copy this URL and use it to configure the EndPoint option (see stx deploy --help)
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		defer log.Flush()
 		ip, ipErr := ipify.GetIp()

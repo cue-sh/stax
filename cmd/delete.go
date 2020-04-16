@@ -19,7 +19,11 @@ func init() {
 var deleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Deletes the stack along with .yml and .out.cue files",
-	Long:  `Yada yada yada.`,
+	Long: `Beware that the only safety mechanism provided
+is a requirement to enter the stack name (case-sensitive match).
+
+It is up to you to ensure the proper authorization policies
+to the credentials being used!`,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		//TODO add debug messages

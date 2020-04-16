@@ -20,7 +20,32 @@ import (
 var saveCmd = &cobra.Command{
 	Use:   "save",
 	Short: "Saves stack outputs as importable libraries to cue.mod",
-	Long:  `Yada Yada Yada...`,
+	Long: `save operates on every stack found in the evaluated cue files.
+	
+For each stack that has Outputs defined, save will query CloudFormation
+and write the Outputs as cue-formatted key:value pairs. Each stack will be
+saved as its own file with a .out.cue extension. 
+
+To determine where these .out.cue files are saved, stx uses the path of the
+stack's template.cfn.cue file relative to the cue root. If no template.cfn.cue
+file is found, stx will use the path of the concrete leaf, relative to cue root.
+
+As an example, consider the following tree:
+
+infrastructure/
+|-cue                                      ("cue root")
+| |-cue.mod
+| | |-usr/cfn.out/vpc/dev-vpc-usw2.out.cue (outputs file)
+| |-vpc
+| | |-template.cfn.cue                     (template)
+
+Running stx save from infrastructure/cue/vpc will find the stack "dev-vpc-usw2"
+defined in the template.cfn.cue file. stx will use vpc/ as the path relative to
+cue root, to create vpc/ as the path relative to cfn.out.
+
+The outputs file in this example will declare its cue package as "vpc" since
+that is the folder in which it is contained.
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		defer log.Flush()

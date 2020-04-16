@@ -43,7 +43,37 @@ type deployArgs struct {
 var deployCmd = &cobra.Command{
 	Use:   "deploy",
 	Short: "Deploys a stack by creating a changeset, previews expected changes, and optionally executes.",
-	Long:  `Yada yada yada.`,
+	Long: `Deploy will act upon every stack it finds among the evaluated cue files.
+	
+For each stack, a changeset is first created, and the proposed changes are
+displayed. At this point you have the option to execute the changeset
+before moving on to the next stack.
+
+The following config.stx.cue options are available:
+
+Cmd: {
+	Deploy: {
+		Notify: {
+			Endpoint: string | *""
+			TopicArn: string | *""
+		}
+	}
+}
+
+Use Notify properties to enable the notify command to receive stack event
+notifications from SNS. The endpoint will be the http address provided by
+the notify command. If this is run behind a router, you will need to enable
+port forwarding. If port forwarding is not possible, such as in a corporate
+office setting, stx notify could be run on a remote machine such as an EC2 
+instance, or virtual workspace.
+
+The TopicArn is an SNS topic that is provided as a NotificationArn when
+creating changesets. In a team setting, it may be better for each member to
+have their own topic; keep in mind that the last person to deploy will be
+the one to receive notifications when the stack is deleted. To receive events
+during a delete operation be sure to update the stack with your own TopicArn
+before deleting.
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		defer log.Flush()

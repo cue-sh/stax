@@ -22,7 +22,10 @@ func init() {
 var importCmd = &cobra.Command{
 	Use:   "import",
 	Short: "Imports an existing stack into Cue.",
-	Long:  `yada yada yada.`,
+	Long: `Import operates on a single stack provided by --stack.
+	
+	Import will download the template as stored in CloudFormation, wrap it in the
+	Stacks pattern, and save it as a formatted Cue file.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		defer log.Flush()

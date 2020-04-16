@@ -15,7 +15,8 @@ import (
 var printCmd = &cobra.Command{
 	Use:   "print",
 	Short: "Prints the Cue output as YAML",
-	Long:  `yada yada yada`,
+	Long: `Print will operate on every stack found in the evaluated cue files.
+Each stack will be converted to YAML then printed to stdout.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		defer log.Flush()
