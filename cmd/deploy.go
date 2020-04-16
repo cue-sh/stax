@@ -52,16 +52,16 @@ before moving on to the next stack.
 The following config.stx.cue options are available:
 
 Cmd: {
-	Deploy: {
-		Notify: {
-			Endpoint: string | *""
-			TopicArn: string | *""
-		}
-	}
+  Deploy: {
+    Notify: {
+      Endpoint: string | *""
+      TopicArn: string | *""
+    }
+  }
 }
 
-Use Notify properties to enable the notify command to receive stack event
-notifications from SNS. The endpoint will be the http address provided by
+Use Cmd:Deploy:Notify: properties to enable the notify command to receive stack
+event notifications from SNS. The endpoint will be the http address provided by
 the notify command. If this is run behind a router, you will need to enable
 port forwarding. If port forwarding is not possible, such as in a corporate
 office setting, stx notify could be run on a remote machine such as an EC2 
@@ -71,8 +71,8 @@ The TopicArn is an SNS topic that is provided as a NotificationArn when
 creating changesets. In a team setting, it may be better for each member to
 have their own topic; keep in mind that the last person to deploy will be
 the one to receive notifications when the stack is deleted. To receive events
-during a delete operation be sure to update the stack with your own TopicArn
-before deleting.
+during a delete operation, be sure to update the stack with your own TopicArn
+first.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 

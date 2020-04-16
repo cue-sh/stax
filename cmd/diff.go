@@ -19,11 +19,14 @@ import (
 var diffCmd = &cobra.Command{
 	Use:   "diff",
 	Short: "Diff against the current CloudFormation template.",
-	Long: `Diff will operate upon every stack found amond the evaluated cue files.
+	Long: `Diff will operate upon every stack found among the evaluated cue files.
 	
-Diff will first export the stack, download the template stored in 
-CloudFormation, then produce a rich, functional, property-based diff (not text-
-based) against the two templates.`,
+For each stack, diff will first export the stack, download the template stored
+in CloudFormation, then produce a rich, functional, property-based diff (not 
+text-based) against the two templates.
+
+Diff is an implementation of https://github.com/homeport/dyff
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		defer log.Flush()
