@@ -72,6 +72,9 @@ applied to the credentials being used! **
 					continue
 				}
 
+				// TODO: delete yml and cfn.out files
+				// look to save.go lines 101-120
+				// export.go lines 67-70
 			}
 		})
 	},
