@@ -83,7 +83,7 @@ func createTemplate(args []string, template string) error {
 		return cueOutputErr
 	}
 
-	writeErr := ioutil.WriteFile(pathToTemplate, cueOutput, 0655)
+	writeErr := ioutil.WriteFile(pathToTemplate, cueOutput, 0644)
 	if writeErr != nil {
 		return writeErr
 	}
