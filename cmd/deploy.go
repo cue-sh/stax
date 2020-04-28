@@ -336,6 +336,7 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 
 	log.Check()
 
+	log.Infof("%s %s %s %s:%s\n", au.White("Describing"), au.BrightBlue(changeSetName), au.White("⤎"), au.Magenta(stack.Name), au.Cyan(stack.Region))
 	describeChangesetOuput, describeChangesetErr := cfn.DescribeChangeSet(&describeChangesetInput)
 	if describeChangesetErr != nil {
 		log.Fatalf("%+v", au.Red(describeChangesetErr))
@@ -391,7 +392,16 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 	input = strings.ToLower(input)
 	matched, _ := regexp.MatchString("^(y){1}(es)?$", input)
 	if !matched {
-		os.Exit(0) // exit if any other key were pressed
+		// delete changeset and continue
+		var deleteChangesetInput cloudformation.DeleteChangeSetInput
+		deleteChangesetInput.ChangeSetName = createChangeSetInput.ChangeSetName
+		deleteChangesetInput.StackName = createChangeSetInput.StackName
+		log.Infof("%s %s\n", au.White("Deleting"), au.BrightBlue(changeSetName))
+		_, deleteChangeSetErr := cfn.DeleteChangeSet(&deleteChangesetInput)
+		if deleteChangeSetErr != nil {
+			log.Error(deleteChangeSetErr)
+		}
+		return
 	}
 
 	executeChangeSetInput := cloudformation.ExecuteChangeSetInput{
