@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
@@ -63,8 +66,21 @@ applied to the credentials being used! **
 
 				session := stx.GetSession(stack.Profile)
 				cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
-
-				// use a struct to pass a string, it's GC'd!
+				instancePath := buildInstance.Dir
+				cueOutPath := strings.Replace(instancePath, buildInstance.Root, "", 1)
+				dirs := strings.Split(instancePath, config.OsSeparator)
+				path := ""
+				for i := len(dirs); i > 0; i-- {
+					path = strings.Join(dirs[:i], config.OsSeparator)
+					if _, err := os.Stat(path + config.OsSeparator + "template.cfn.cue"); !os.IsNotExist(err) {
+						break // found it!
+					}
+				}
+				if path != "" {
+					cueOutPath = strings.Replace(path, buildInstance.Root, "", 1)
+				}
+				cueOutPath = strings.Replace(buildInstance.Root+"/cue.mod/usr/cfn.out"+cueOutPath, "-", "", -1)
+				outputsFileName := cueOutPath + "/" + stack.Name + ".out.cue"
 				deleteStackInput := cloudformation.DeleteStackInput{StackName: aws.String(stack.Name)}
 				_, deleteStackErr := cfn.DeleteStack(&deleteStackInput)
 				if deleteStackErr != nil {
@@ -72,9 +88,20 @@ applied to the credentials being used! **
 					continue
 				}
 
-				// TODO: delete yml and cfn.out files
-				// look to save.go lines 101-120
-				// export.go lines 67-70
+				dir := filepath.Clean(config.CueRoot + "/" + config.Cmd.Export.YmlPath + "/" + stack.Profile)
+				cfnFileName := dir + "/" + stack.Name + ".cfn.yml"
+				deleteCfnErr := os.Remove(cfnFileName)
+				deleteOutputsErr := os.Remove(outputsFileName)
+				if deleteOutputsErr != nil {
+					fmt.Println(deleteOutputsErr)
+					return
+				}
+				if deleteCfnErr != nil {
+					fmt.Println(deleteCfnErr)
+					return
+				}
+				log.Infof("%s %s %s %s\n", au.White("Deleted"), au.Magenta(stack.Name), au.White("⤏"), cfnFileName)
+				log.Infof("%s %s %s %s\n", au.White("Deleted"), au.Magenta(stack.Name), au.White("⤏"), outputsFileName)
 			}
 		})
 	},
