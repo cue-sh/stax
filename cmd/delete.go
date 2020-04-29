@@ -66,6 +66,12 @@ applied to the credentials being used! **
 
 				session := stx.GetSession(stack.Profile)
 				cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
+				deleteStackInput := cloudformation.DeleteStackInput{StackName: aws.String(stack.Name)}
+				_, deleteStackErr := cfn.DeleteStack(&deleteStackInput)
+				if deleteStackErr != nil {
+					log.Error(deleteStackErr)
+					continue
+				}
 				instancePath := buildInstance.Dir
 				cueOutPath := strings.Replace(instancePath, buildInstance.Root, "", 1)
 				dirs := strings.Split(instancePath, config.OsSeparator)
@@ -81,13 +87,6 @@ applied to the credentials being used! **
 				}
 				cueOutPath = strings.Replace(buildInstance.Root+"/cue.mod/usr/cfn.out"+cueOutPath, "-", "", -1)
 				outputsFileName := cueOutPath + "/" + stack.Name + ".out.cue"
-				deleteStackInput := cloudformation.DeleteStackInput{StackName: aws.String(stack.Name)}
-				_, deleteStackErr := cfn.DeleteStack(&deleteStackInput)
-				if deleteStackErr != nil {
-					log.Error(deleteStackErr)
-					continue
-				}
-
 				dir := filepath.Clean(config.CueRoot + "/" + config.Cmd.Export.YmlPath + "/" + stack.Profile)
 				cfnFileName := dir + "/" + stack.Name + ".cfn.yml"
 				deleteCfnErr := os.Remove(cfnFileName)
