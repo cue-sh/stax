@@ -90,17 +90,15 @@ applied to the credentials being used! **
 				dir := filepath.Clean(config.CueRoot + "/" + config.Cmd.Export.YmlPath + "/" + stack.Profile)
 				cfnFileName := dir + "/" + stack.Name + ".cfn.yml"
 				deleteCfnErr := os.Remove(cfnFileName)
+				log.Infof("%s %s %s %s\n", au.White("Deleted"), au.Magenta(stack.Name), au.White("⤏"), cfnFileName)
 				deleteOutputsErr := os.Remove(outputsFileName)
+				log.Infof("%s %s %s %s\n", au.White("Deleted"), au.Magenta(stack.Name), au.White("⤏"), outputsFileName)
 				if deleteOutputsErr != nil {
-					fmt.Println(deleteOutputsErr)
-					return
+					log.Error(deleteOutputsErr)
 				}
 				if deleteCfnErr != nil {
-					fmt.Println(deleteCfnErr)
-					return
+					log.Error(deleteCfnErr)
 				}
-				log.Infof("%s %s %s %s\n", au.White("Deleted"), au.Magenta(stack.Name), au.White("⤏"), cfnFileName)
-				log.Infof("%s %s %s %s\n", au.White("Deleted"), au.Magenta(stack.Name), au.White("⤏"), outputsFileName)
 			}
 		})
 	},
