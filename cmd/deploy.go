@@ -367,18 +367,22 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 				"",
 				"",
 			}
-			for _, detail := range change.ResourceChange.Details {
-				row[2] = aws.StringValue(detail.Target.Attribute)
-				row[3] = aws.StringValue(detail.Target.Name)
-				recreation := aws.StringValue(detail.Target.RequiresRecreation)
+			if aws.StringValue(change.ResourceChange.Action) == "Add" {
+				table.Append(row)
+			} else {
+				for _, detail := range change.ResourceChange.Details {
+					row[2] = aws.StringValue(detail.Target.Attribute)
+					row[3] = aws.StringValue(detail.Target.Name)
+					recreation := aws.StringValue(detail.Target.RequiresRecreation)
 
-				if recreation == "ALWAYS" || recreation == "CONDITIONAL" {
-					row[4] = au.Red(recreation).String()
-				} else {
-					row[4] = recreation
+					if recreation == "ALWAYS" || recreation == "CONDITIONAL" {
+						row[4] = au.Red(recreation).String()
+					} else {
+						row[4] = recreation
+					}
+					table.Append(row)
 				}
 			}
-			table.Append(row)
 		}
 		table.Render()
 	}
