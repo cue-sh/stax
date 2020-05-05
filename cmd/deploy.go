@@ -360,24 +360,17 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 
 		for _, change := range describeChangesetOuput.Changes {
 
+			row := []string{
+				aws.StringValue(change.ResourceChange.LogicalResourceId),
+				aws.StringValue(change.ResourceChange.Action),
+				"",
+				"",
+				"",
+			}
 			if aws.StringValue(change.ResourceChange.Action) == "Add" {
-				row := []string{
-					aws.StringValue(change.ResourceChange.LogicalResourceId),
-					aws.StringValue(change.ResourceChange.Action),
-					"",
-					"",
-					"",
-				}
 				table.Append(row)
 			} else {
 				for _, detail := range change.ResourceChange.Details {
-					row := []string{
-						aws.StringValue(change.ResourceChange.LogicalResourceId),
-						aws.StringValue(change.ResourceChange.Action),
-						"",
-						"",
-						"",
-					}
 					row[2] = aws.StringValue(detail.Target.Attribute)
 					row[3] = aws.StringValue(detail.Target.Name)
 					recreation := aws.StringValue(detail.Target.RequiresRecreation)
