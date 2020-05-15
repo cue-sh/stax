@@ -20,9 +20,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/sns"
-	"github.com/joho/godotenv"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
 )
 
 func init() {
@@ -189,99 +189,107 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 	if describeStacksErr != nil {
 		changeSetType = "CREATE" // if stack does not already exist
 	}
+
 	createChangeSetInput.ChangeSetType = &changeSetType
 
-	parametersMap := make(map[string]string)
+	stackParametersValue := stackValue.Lookup("Template", "Parameters")
+	if stackParametersValue.Exists() {
 
-	if !flags.DeployPrevious {
-		// look for secrets file
-		secretsPath := filepath.Clean(buildInstance.DisplayPath + "/secrets.env")
-		if _, err := os.Stat(secretsPath); !os.IsNotExist(err) {
-			if !flags.DeployPrevious {
-				log.Infof("%s", au.Gray(11, "  Decrypting secrets..."))
-			}
-
-			secrets, secretsErr := stx.DecryptSecrets(secretsPath, stack.SopsProfile)
-
-			if secretsErr != nil {
-				log.Error(secretsErr)
-				return
-			}
-
-			for k, v := range secrets {
-				parametersMap[k] = v
-			}
-
-			log.Check()
-
-			if flags.DeploySave {
-				saveErr := saveStackOutputs(buildInstance, stack)
-				if saveErr != nil {
-					log.Error(saveErr)
-				}
-			}
-		}
-
-		paramsPath := filepath.Clean(buildInstance.DisplayPath + "/params.env")
-		if _, err := os.Stat(paramsPath); !os.IsNotExist(err) {
-
-			log.Infof("%s", au.Gray(11, "  Loading parameters..."))
-
-			myEnv, err := godotenv.Read(paramsPath)
-
-			if err != nil {
-				log.Error(err)
-				return
-			}
-
-			for k, v := range myEnv {
-				parametersMap[k] = v
-			}
-
-			log.Check()
-
-			if flags.DeploySave {
-				saveErr := saveStackOutputs(buildInstance, stack)
-				if saveErr != nil {
-					log.Error(saveErr)
-				}
-			}
-		}
-	} else {
-		// deploy using previous values
-		stackParameters, stackParametersErr := stackValue.Lookup("Template", "Parameters").Fields()
-		if stackParametersErr != nil {
-			log.Fatal(stackParametersErr)
-		}
-		for stackParameters.Next() {
-			stackParam := stackParameters.Value()
-			key, _ := stackParam.Label()
-			parametersMap[key] = ""
-		}
-	}
-
-	var parameters []*cloudformation.Parameter
-
-	if flags.DeployPrevious {
-		log.Infof("%s", au.Gray(11, "  Using previous parameters..."))
-		log.Check()
-	}
-
-	for paramKey, paramVal := range parametersMap {
-		myKey := paramKey
-		myValue := paramVal
-		parameter := cloudformation.Parameter{ParameterKey: aws.String(myKey)}
+		// TODO paramaters need to support the type as declared in Parameter.Type (in the least string and number).
+		// this should be map[string]interface{} with type casting done when adding parameters to the changeset
+		parametersMap := make(map[string]string)
+		var parameters []*cloudformation.Parameter
 
 		if flags.DeployPrevious {
-			parameter.SetUsePreviousValue(true)
+			// deploy using previous values
+			stackParameters, stackParametersErr := stackParametersValue.Fields()
+			if stackParametersErr != nil {
+				log.Fatal(stackParametersErr)
+				return
+			}
+			log.Infof("%s", au.Gray(11, "  Using previous parameters..."))
+			for stackParameters.Next() {
+				stackParam := stackParameters.Value()
+				key, _ := stackParam.Label()
+				parametersMap[key] = ""
+			}
+			log.Check()
 		} else {
-			parameter.ParameterValue = aws.String(myValue)
+			// load overrides
+
+			if len(stack.Overrides) < 0 {
+				log.Fatal("Template has Parameters but no Overrides are defined.")
+				return
+			}
+
+			for k, v := range stack.Overrides {
+				path := k
+				behavior := v
+
+				var yamlBytes []byte
+				var yamlBytesErr error
+
+				if behavior.SopsProfile != "" {
+					// decrypt the file contents
+					log.Debugf("Decrypting %s\n", path)
+					yamlBytes, yamlBytesErr = stx.DecryptSecrets(filepath.Clean(buildInstance.Root+"/"+path), behavior.SopsProfile)
+				} else {
+					log.Debugf("Reading %s\n", path)
+					// just pull the file contents directly
+					yamlBytes, yamlBytesErr = ioutil.ReadFile(filepath.Clean(buildInstance.Root + "/" + path))
+				}
+				log.Debugf("Loaded %s\n", yamlBytes)
+
+				if yamlBytesErr != nil {
+					log.Fatal(yamlBytesErr)
+					return
+				}
+
+				// TODO paramaters need to support the type as declared in Parameter.Type (in the least string and number).
+				// this should be map[string]interface{} with type casting done when adding parameters to the changeset
+				var override map[string]string
+
+				yamlUnmarshalErr := yaml.Unmarshal(yamlBytes, &override)
+				if yamlUnmarshalErr != nil {
+					log.Fatal(yamlUnmarshalErr)
+					return
+				}
+
+				if len(behavior.Map) > 0 {
+					// map the yaml key:value to parameter key:value
+					for k, v := range behavior.Map {
+						fromKey := k
+						toKey := v
+						parametersMap[toKey] = override[fromKey]
+					}
+				} else {
+					// just do a straight copy, keys should align 1:1
+					for k, v := range override {
+						key := k
+						val := v
+						parametersMap[key] = val
+					}
+				}
+			}
 		}
 
-		parameters = append(parameters, &parameter)
-	}
+		for k, v := range parametersMap {
+			paramKey := k
+			paramVal := v
+			parameter := cloudformation.Parameter{ParameterKey: aws.String(paramKey)}
 
-	createChangeSetInput.SetParameters(parameters)
+			if flags.DeployPrevious {
+				parameter.SetUsePreviousValue(true)
+			} else {
+				parameter.ParameterValue = aws.String(paramVal)
+			}
+
+			parameters = append(parameters, &parameter)
+		}
+
+		createChangeSetInput.SetParameters(parameters)
+
+	} // end stackParametersValue.Exists()
 
 	// handle Stack.Tags
 	if len(stack.Tags) > 0 {

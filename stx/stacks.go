@@ -10,9 +10,13 @@ import (
 
 // Stack represents the decoded value of stacks[stackname]
 type Stack struct {
-	Name, Profile, SopsProfile, Region, Environment, RegionCode string
-	DependsOn                                                   []string
-	Tags                                                        map[string]string
+	Name, Profile, Region, Environment, RegionCode string
+	Overrides                                      map[string]struct {
+		SopsProfile string
+		Map         map[string]string
+	}
+	DependsOn []string
+	Tags      map[string]string
 }
 
 // StacksIterator is a wrapper around cue.Iterator that allows for filtering based on stack fields
