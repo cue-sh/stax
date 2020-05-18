@@ -3,6 +3,7 @@ package stx
 import (
 	"errors"
 	"regexp"
+	"strings"
 
 	"cuelang.org/go/cue"
 	"github.com/TangoGroup/stx/logger"
@@ -96,6 +97,7 @@ func (it *StacksIterator) Next() bool {
 	}
 
 	if it.flags.Profile != "" {
+		it.log.Debug("Evaluating --profile", it.flags.Profile)
 		profileValue := currentValue.Lookup("Profile")
 		if !profileValue.Exists() {
 			return it.Next()
@@ -106,6 +108,15 @@ func (it *StacksIterator) Next() bool {
 			return it.Next()
 		}
 		if it.flags.Profile != profile {
+			return it.Next()
+		}
+	}
+
+	if it.flags.Has != "" {
+		it.log.Debug("Evaluating --has", it.flags.Has)
+		path := strings.Split(it.flags.Has, ".")
+		hasValue := currentValue.Lookup(path...)
+		if !hasValue.Exists() {
 			return it.Next()
 		}
 	}
