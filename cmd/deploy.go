@@ -73,6 +73,7 @@ have their own topic; keep in mind that the last person to deploy will be
 the one to receive notifications when the stack is deleted. To receive events
 during a delete operation, be sure to update the stack with your own TopicArn
 first.
+
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 
@@ -217,6 +218,7 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 		} else {
 			// load overrides
 
+			// TODO #48 stx should prompt for each Parameter input if overrides are undefined
 			if len(stack.Overrides) < 0 {
 				log.Fatal("Template has Parameters but no Overrides are defined.")
 				return
@@ -225,27 +227,24 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 			for k, v := range stack.Overrides {
 				path := k
 				behavior := v
-
+				log.Infof("%s", au.Gray(11, "  Applying overrides: "+path+" "))
 				var yamlBytes []byte
 				var yamlBytesErr error
 
 				if behavior.SopsProfile != "" {
 					// decrypt the file contents
-					log.Debugf("Decrypting %s\n", path)
 					yamlBytes, yamlBytesErr = stx.DecryptSecrets(filepath.Clean(buildInstance.Root+"/"+path), behavior.SopsProfile)
 				} else {
-					log.Debugf("Reading %s\n", path)
 					// just pull the file contents directly
 					yamlBytes, yamlBytesErr = ioutil.ReadFile(filepath.Clean(buildInstance.Root + "/" + path))
 				}
-				log.Debugf("Loaded %s\n", yamlBytes)
 
 				if yamlBytesErr != nil {
 					log.Fatal(yamlBytesErr)
 					return
 				}
 
-				// TODO paramaters need to support the type as declared in Parameter.Type (in the least string and number).
+				// TODO #47 parameters need to support the type as declared in Parameter.Type (in the least string and number).
 				// this should be map[string]interface{} with type casting done when adding parameters to the changeset
 				var override map[string]string
 
@@ -265,14 +264,16 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 				} else {
 					// just do a straight copy, keys should align 1:1
 					for k, v := range override {
-						key := k
-						val := v
-						parametersMap[key] = val
+						overrideKey := k
+						overrideVal := v
+						parametersMap[overrideKey] = overrideVal
 					}
 				}
+				log.Check()
 			}
 		}
 
+		// apply parameters to changeset
 		for k, v := range parametersMap {
 			paramKey := k
 			paramVal := v
