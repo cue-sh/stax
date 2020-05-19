@@ -225,9 +225,11 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 			}
 
 			for k, v := range stack.Overrides {
-				path := k
+				path := strings.Replace(k, "${STX::CuePath}", strings.Replace(buildInstance.Dir, buildInstance.Root+"/", "", 1), 1)
 				behavior := v
+
 				log.Infof("%s", au.Gray(11, "  Applying overrides: "+path+" "))
+
 				var yamlBytes []byte
 				var yamlBytesErr error
 
@@ -376,9 +378,8 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 				"",
 				"",
 			}
-			if aws.StringValue(change.ResourceChange.Action) == "Add" {
-				table.Append(row)
-			} else {
+
+			if aws.StringValue(change.ResourceChange.Action) == "Modify" {
 				for _, detail := range change.ResourceChange.Details {
 					row[2] = aws.StringValue(detail.Target.Attribute)
 					row[3] = aws.StringValue(detail.Target.Name)
@@ -391,6 +392,8 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 					}
 					table.Append(row)
 				}
+			} else {
+				table.Append(row)
 			}
 		}
 		table.Render()
