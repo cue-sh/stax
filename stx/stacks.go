@@ -3,6 +3,7 @@ package stx
 import (
 	"errors"
 	"regexp"
+	"strings"
 
 	"cuelang.org/go/cue"
 	"github.com/TangoGroup/stx/logger"
@@ -10,9 +11,13 @@ import (
 
 // Stack represents the decoded value of stacks[stackname]
 type Stack struct {
-	Name, Profile, SopsProfile, Region, Environment, RegionCode string
-	DependsOn                                                   []string
-	Tags                                                        map[string]string
+	Name, Profile, Region, Environment, RegionCode string
+	Overrides                                      map[string]struct {
+		SopsProfile string
+		Map         map[string]string
+	}
+	DependsOn []string
+	Tags      map[string]string
 }
 
 // StacksIterator is a wrapper around cue.Iterator that allows for filtering based on stack fields
@@ -92,6 +97,7 @@ func (it *StacksIterator) Next() bool {
 	}
 
 	if it.flags.Profile != "" {
+		it.log.Debug("Evaluating --profile", it.flags.Profile)
 		profileValue := currentValue.Lookup("Profile")
 		if !profileValue.Exists() {
 			return it.Next()
@@ -102,6 +108,15 @@ func (it *StacksIterator) Next() bool {
 			return it.Next()
 		}
 		if it.flags.Profile != profile {
+			return it.Next()
+		}
+	}
+
+	if it.flags.Has != "" {
+		it.log.Debug("Evaluating --has", it.flags.Has)
+		path := strings.Split(it.flags.Has, ".")
+		hasValue := currentValue.Lookup(path...)
+		if !hasValue.Exists() {
 			return it.Next()
 		}
 	}

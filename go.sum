@@ -8,6 +8,7 @@ cuelang.org/go v0.0.15 h1:rpZtf1ZGYfZwbMHLwIif5Gczil+HF7rHAU7MFNOGV/A=
 cuelang.org/go v0.0.15/go.mod h1:gehQASsTv+lFZknWIG0hANGVSBiHD7HyKWmAdEZL3No=
 cuelang.org/go v0.0.16-0.20200409135714-882d88d6bbd8 h1:gmt2YSTqJaZU/GOhOqUVyi1GwZIUs4yKq3uaE3RsDf8=
 cuelang.org/go v0.0.16-0.20200409135714-882d88d6bbd8/go.mod h1:fqiLgsri/9JYLk6Us2l8W6jeWlvpHVaH3qfnYdobhSQ=
+cuelang.org/go v0.1.2 h1:q0i9ZcE7Ix7NmMyzdj1287FSr0x2xTBZ3KW4+rtfjbU=
 github.com/Azure/azure-sdk-for-go v31.2.0+incompatible h1:kZFnTLmdQYNGfakatSivKHUfUnDZhqNdchHD4oIhp5k=
 github.com/Azure/azure-sdk-for-go v31.2.0+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
 github.com/Azure/go-autorest/autorest v0.1.0/go.mod h1:AKyIcETwSUFxIcs/Wnq/C+kwCtlEYGUVd7FPNb2slmg=
