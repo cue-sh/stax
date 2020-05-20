@@ -256,6 +256,7 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 					return
 				}
 
+				// TODO #50 stx should error when a parameter key is duplicated among two or more overrides files
 				if len(behavior.Map) > 0 {
 					// map the yaml key:value to parameter key:value
 					for k, v := range behavior.Map {
