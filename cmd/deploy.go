@@ -358,6 +358,14 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 		//TODO put describeChangesetOuput into table view
 		log.Infof("%+v", describeChangesetOuput)
 		log.Info("No changes to deploy.")
+		var deleteChangesetInput cloudformation.DeleteChangeSetInput
+		deleteChangesetInput.ChangeSetName = createChangeSetInput.ChangeSetName
+		deleteChangesetInput.StackName = createChangeSetInput.StackName
+		log.Infof("%s %s\n", au.White("Deleting"), au.BrightBlue(changeSetName))
+		_, deleteChangeSetErr := cfn.DeleteChangeSet(&deleteChangesetInput)
+		if deleteChangeSetErr != nil {
+			log.Error(deleteChangeSetErr)
+		}
 		return
 	}
 
