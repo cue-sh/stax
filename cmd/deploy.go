@@ -372,7 +372,7 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 	if aws.StringValue(describeChangesetOuput.ExecutionStatus) != "AVAILABLE" || aws.StringValue(describeChangesetOuput.Status) != "CREATE_COMPLETE" {
 		//TODO put describeChangesetOuput into table view
 		log.Infof("%+v\n", describeChangesetOuput)
-		log.Info(au.Blue("No changes to deploy."))
+		log.Info(au.Yellow("No changes to deploy."))
 		var deleteChangesetInput cloudformation.DeleteChangeSetInput
 		deleteChangesetInput.ChangeSetName = createChangeSetInput.ChangeSetName
 		deleteChangesetInput.StackName = createChangeSetInput.StackName
