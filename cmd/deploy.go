@@ -17,6 +17,7 @@ import (
 	"github.com/TangoGroup/stx/graph"
 	"github.com/TangoGroup/stx/stx"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/sns"
@@ -335,6 +336,20 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 	_, createChangeSetErr := cfn.CreateChangeSet(&createChangeSetInput)
 
 	if createChangeSetErr != nil {
+		if awsErr, ok := createChangeSetErr.(awserr.Error); ok {
+			log.Infof(" %s\n", au.Red(awsErr))
+			if awsErr.Code() == "AlreadyExistsException" {
+				var deleteChangesetInput cloudformation.DeleteChangeSetInput
+				deleteChangesetInput.ChangeSetName = createChangeSetInput.ChangeSetName
+				deleteChangesetInput.StackName = createChangeSetInput.StackName
+				log.Infof("%s %s\n", au.White("Deleting"), au.BrightBlue(changeSetName))
+				_, deleteChangeSetErr := cfn.DeleteChangeSet(&deleteChangesetInput)
+				if deleteChangeSetErr != nil {
+					log.Error(deleteChangeSetErr)
+				}
+				return
+			}
+		}
 		log.Fatal(createChangeSetErr)
 	}
 
@@ -356,8 +371,8 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 
 	if aws.StringValue(describeChangesetOuput.ExecutionStatus) != "AVAILABLE" || aws.StringValue(describeChangesetOuput.Status) != "CREATE_COMPLETE" {
 		//TODO put describeChangesetOuput into table view
-		log.Infof("%+v", describeChangesetOuput)
-		log.Info("No changes to deploy.")
+		log.Infof("%+v\n", describeChangesetOuput)
+		log.Info(au.Blue("No changes to deploy."))
 		var deleteChangesetInput cloudformation.DeleteChangeSetInput
 		deleteChangesetInput.ChangeSetName = createChangeSetInput.ChangeSetName
 		deleteChangesetInput.StackName = createChangeSetInput.StackName
