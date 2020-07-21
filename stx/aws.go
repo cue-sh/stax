@@ -63,6 +63,7 @@ func GetProfileCredentials(profile string) AwsCredentials {
 	execOut, execErr := exec.Command("aws-vault", "exec", "--json", profile).Output()
 
 	if execErr != nil {
+		fmt.Println(au.Red("Unable to get credentials for profile: "), au.Red(profile))
 		fmt.Println(au.Red(execErr))
 		os.Exit(1)
 	}
