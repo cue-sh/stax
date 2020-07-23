@@ -138,7 +138,7 @@ func saveStackOutputs(buildInstance *build.Instance, stack stx.Stack) error {
 
 	// save it!
 	os.MkdirAll(cueOutPath, 0766)
-	writeErr := ioutil.WriteFile(fileName, cueOutput, 0766)
+	writeErr := ioutil.WriteFile(fileName, cueOutput, 0644)
 	if writeErr != nil {
 		return writeErr
 	}
