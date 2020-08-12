@@ -297,7 +297,7 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 	} // end stackParametersValue.Exists()
 
 	// handle Stack.Tags
-	if len(stack.Tags) > 0 {
+	if len(stack.Tags) > 0 && stack.TagsEnabled {
 		var tags []*cloudformation.Tag
 		for k, v := range stack.Tags {
 			tagK := k // reassign here to avoid issues with for-scope var

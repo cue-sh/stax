@@ -16,8 +16,9 @@ type Stack struct {
 		SopsProfile string
 		Map         map[string]string
 	}
-	DependsOn []string
-	Tags      map[string]string
+	DependsOn   []string
+	Tags        map[string]string
+	TagsEnabled bool
 }
 
 // StacksIterator is a wrapper around cue.Iterator that allows for filtering based on stack fields
