@@ -92,25 +92,29 @@ applied to the credentials being used! **
 				cueOutPath = strings.Replace(buildInstance.Root+"/cue.mod/usr/cfn.out"+cueOutPath, "-", "", -1)
 				outputsFileName := cueOutPath + "/" + stack.Name + ".out.cue"
 
-				log.Infof("%s", au.Gray(11, "  Removing "+outputsFileName))
-
-				deleteOutputsErr := os.Remove(outputsFileName)
-				if deleteOutputsErr != nil {
-					log.Error(deleteOutputsErr)
+				if _, deleteOutputsErr := os.Stat(outputsFileName); deleteOutputsErr == nil {
+					deleteOutputsErr := os.Remove(outputsFileName)
+					if deleteOutputsErr != nil {
+						log.Error(deleteOutputsErr)
+					} else {
+						log.Infof("%s %s\n", au.Gray(11, "  Removed →"), au.White(outputsFileName))
+					}
 				} else {
-					log.Check()
+					log.Infof("%s %s %s", au.Gray(11, "File → "), au.White(outputsFileName), au.Gray(11, " does not exist, skipping...\n "))
 				}
 
 				dir := filepath.Clean(config.CueRoot + "/" + config.Cmd.Export.YmlPath + "/" + stack.Profile)
 				cfnFileName := dir + "/" + stack.Name + ".cfn.yml"
 
-				log.Infof("%s", au.Gray(11, "  Removing "+cfnFileName))
-
-				deleteCfnErr := os.Remove(cfnFileName)
-				if deleteCfnErr != nil {
-					log.Error(deleteCfnErr)
+				if _, deleteCfnErr := os.Stat(cfnFileName); deleteCfnErr == nil {
+					deleteCfnErr := os.Remove(cfnFileName)
+					if deleteCfnErr != nil {
+						log.Error(deleteCfnErr)
+					} else {
+						log.Infof("%s %s\n", au.Gray(11, "  Removed →"), au.White(cfnFileName))
+					}
 				} else {
-					log.Check()
+					log.Infof("%s %s %s", au.Gray(11, "File → "), au.White(cfnFileName), au.Gray(11, " does not exist, skipping...\n "))
 				}
 			}
 		})
