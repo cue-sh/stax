@@ -56,7 +56,7 @@ applied to the credentials being used! **
 					continue
 				}
 
-				log.Infof("%s %s?\nEnter the name of the stack to confirm.\n▶︎", au.Red("DELETE"), au.Magenta(stack.Name))
+				log.Infof("%s %s ?\nEnter the name of the stack to confirm.\n▶︎", au.Red("DELETE"), au.Magenta(stack.Name))
 				var input string
 				fmt.Scanln(&input)
 
@@ -97,7 +97,7 @@ applied to the credentials being used! **
 					if deleteOutputsErr != nil {
 						log.Error(deleteOutputsErr)
 					} else {
-						log.Infof("%s %s\n", au.Gray(11, "  Removed →"), au.White(outputsFileName))
+						log.Infof("%s %s\n", au.Gray(11, "Removed →"), au.White(outputsFileName))
 					}
 				} else {
 					log.Infof("%s %s %s", au.Gray(11, "File → "), au.White(outputsFileName), au.Gray(11, " does not exist, skipping...\n "))
@@ -111,7 +111,7 @@ applied to the credentials being used! **
 					if deleteCfnErr != nil {
 						log.Error(deleteCfnErr)
 					} else {
-						log.Infof("%s %s\n", au.Gray(11, "  Removed →"), au.White(cfnFileName))
+						log.Infof("%s %s\n", au.Gray(11, "Removed →"), au.White(cfnFileName))
 					}
 				} else {
 					log.Infof("%s %s %s", au.Gray(11, "File → "), au.White(cfnFileName), au.Gray(11, " does not exist, skipping...\n "))
