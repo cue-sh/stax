@@ -100,7 +100,7 @@ applied to the credentials being used! **
 						log.Infof("%s %s\n", au.Gray(11, "Removed →"), au.White(outputsFileName))
 					}
 				} else {
-					log.Infof("%s %s %s", au.Gray(11, "File → "), au.White(outputsFileName), au.Gray(11, " does not exist, skipping...\n "))
+					log.Check()
 				}
 
 				dir := filepath.Clean(config.CueRoot + "/" + config.Cmd.Export.YmlPath + "/" + stack.Profile)
@@ -114,7 +114,7 @@ applied to the credentials being used! **
 						log.Infof("%s %s\n", au.Gray(11, "Removed →"), au.White(cfnFileName))
 					}
 				} else {
-					log.Infof("%s %s %s", au.Gray(11, "File → "), au.White(cfnFileName), au.Gray(11, " does not exist, skipping...\n "))
+					log.Check()
 				}
 			}
 		})
