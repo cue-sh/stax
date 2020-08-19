@@ -97,7 +97,7 @@ applied to the credentials being used! **
 					if deleteOutputsErr != nil {
 						log.Error(deleteOutputsErr)
 					} else {
-						log.Infof("%s %s\n", au.Gray(11, "Removed →"), au.White(outputsFileName))
+						log.Infof("%s %s\n", au.White("Removed →"), au.Gray(11, outputsFileName))
 					}
 				} else {
 					log.Check()
@@ -111,7 +111,7 @@ applied to the credentials being used! **
 					if deleteCfnErr != nil {
 						log.Error(deleteCfnErr)
 					} else {
-						log.Infof("%s %s\n", au.Gray(11, "Removed →"), au.White(cfnFileName))
+						log.Infof("%s %s\n", au.White("Removed →"), au.Gray(11, cfnFileName))
 					}
 				} else {
 					log.Check()
