@@ -425,7 +425,8 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 
 	diff(cfn, stack.Name, templateBody)
 
-	log.Infof("%s %s %s %s %s:%s %s %s\n▶︎", au.White("Execute change set "), au.BrightBlue(changeSetName), au.White("on"), au.White("⤏"), au.Magenta(stack.Name), au.Cyan(stack.Region), au.White("?"), "Y to execute. Anything else to cancel.")
+	log.Infof("%s %s %s %s %s:%s %s\n", au.White("Execute change set"), au.BrightBlue(changeSetName), au.White("on"), au.White("⤏"), au.Magenta(stack.Name), au.Cyan(stack.Region), au.White("?"))
+	log.Infof("%s\n▶︎", "Y to execute. Anything else to cancel.")
 	var input string
 	fmt.Scanln(&input)
 
