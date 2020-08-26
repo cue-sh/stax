@@ -38,7 +38,7 @@ infrastructure/
 	Run: func(cmd *cobra.Command, args []string) {
 		defer log.Flush()
 
-		buildInstances := stx.GetBuildInstances(args, "cfn")
+		buildInstances := stx.GetBuildInstances(args, config.PackageName)
 
 		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
 			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)

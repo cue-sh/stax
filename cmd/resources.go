@@ -32,7 +32,7 @@ resources currently managed in the stack.
 		defer log.Flush()
 		stx.EnsureVaultSession(config)
 
-		buildInstances := stx.GetBuildInstances(args, "cfn")
+		buildInstances := stx.GetBuildInstances(args, config.PackageName)
 
 		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
 			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)

@@ -38,7 +38,7 @@ applied to the credentials being used! **
 		defer log.Flush()
 		stx.EnsureVaultSession(config)
 
-		buildInstances := stx.GetBuildInstances(args, "cfn")
+		buildInstances := stx.GetBuildInstances(args, config.PackageName)
 
 		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
 
