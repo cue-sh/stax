@@ -70,6 +70,15 @@ func Process(buildInstances []*build.Instance, flags Flags, log *logger.Logger, 
 	log.Debug("Iterating", len(buildInstances), "build instances...")
 	for _, buildInstance := range buildInstances {
 
+		log.Infof("%+v\n", buildInstance.Deps)
+		for _, file := range buildInstance.Files {
+			log.Infof("%+v\n", file.Filename)
+			for _, imp := range file.Imports {
+				log.Infof("  %+v\n", imp.Path.Value)
+			}
+			log.Info("\n")
+		}
+
 		if excludeRegexp != nil && excludeRegexp.MatchString(buildInstance.DisplayPath) {
 			log.Debug("Excluded via --exlude: ", buildInstance.DisplayPath)
 			continue
