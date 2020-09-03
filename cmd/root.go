@@ -56,6 +56,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&flags.Include, "include", "", "Includes subdirectory paths matching this regular expression.")
 	rootCmd.PersistentFlags().StringVar(&flags.StackNameRegexPattern, "stacks", "", "Includes only stacks whose name matches this regular expression.")
 	rootCmd.PersistentFlags().StringVar(&flags.Has, "has", "", "Includes only stacks that contain the provided path. E.g.: Template.Parameters")
+	rootCmd.PersistentFlags().StringVar(&flags.Imports, "imports", "", "Includes only stacks that import packages matching this regular expression.")
 	rootCmd.PersistentFlags().BoolVar(&flags.Debug, "debug", false, "Enables verbose output of debug level messages.")
 	rootCmd.PersistentFlags().BoolVar(&flags.NoColor, "no-color", false, "Disables color output.")
 }

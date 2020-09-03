@@ -40,8 +40,8 @@ func GetBuildInstances(args []string, pkg string) []*build.Instance {
 // Process iterates over instances, filters based on flags, and applies the handler function for each
 func Process(buildInstances []*build.Instance, flags Flags, log *logger.Logger, handler instanceHandler) {
 
-	var excludeRegexp, includeRegexp *regexp.Regexp
-	var excludeRegexpErr, includeRegexpErr error
+	var excludeRegexp, includeRegexp, importsRegexp *regexp.Regexp
+	var excludeRegexpErr, includeRegexpErr, importsRegexpErr error
 
 	if flags.Exclude != "" {
 		log.Debug("Compiling --exclude regexp...")
@@ -59,8 +59,17 @@ func Process(buildInstances []*build.Instance, flags Flags, log *logger.Logger, 
 		}
 	}
 
+	if flags.Imports != "" {
+		log.Debug("Compiling --imports regexp...")
+		importsRegexp, importsRegexpErr = regexp.Compile(flags.Imports)
+		if importsRegexpErr != nil {
+			log.Fatal(importsRegexpErr)
+		}
+	}
+
 	log.Debug("Iterating", len(buildInstances), "build instances...")
 	for _, buildInstance := range buildInstances {
+
 		if excludeRegexp != nil && excludeRegexp.MatchString(buildInstance.DisplayPath) {
 			log.Debug("Excluded via --exlude: ", buildInstance.DisplayPath)
 			continue
@@ -70,6 +79,22 @@ func Process(buildInstances []*build.Instance, flags Flags, log *logger.Logger, 
 			log.Debug("NOT included via --include: ", buildInstance.DisplayPath)
 			continue
 		}
+
+		if importsRegexp != nil {
+			var found bool
+
+			for _, importPath := range buildInstance.ImportPaths {
+				if importsRegexp.MatchString(importPath) {
+					found = true
+				}
+			}
+
+			if !found {
+				log.Debug("NOT included via --imports: ", buildInstance.DisplayPath)
+				continue
+			}
+		}
+
 		// A cue instance defines a single configuration based on a collection of underlying CUE files.
 		// cue.Build is designed to produce a single cue.Instance from n build.Instances
 		// doing so however, would loose the connection between a stack and the build instance that

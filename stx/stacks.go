@@ -31,6 +31,7 @@ type StacksIterator struct {
 // NewStacksIterator returns *StacksIterator
 func NewStacksIterator(cueInstance *cue.Instance, flags Flags, log *logger.Logger) (*StacksIterator, error) {
 	log.Debug("Getting stacks...")
+
 	stacks := cueInstance.Value().Lookup("Stacks")
 	if !stacks.Exists() {
 		return nil, errors.New("Stacks is undefined")
@@ -51,6 +52,7 @@ func (it *StacksIterator) Next() bool {
 	}
 
 	currentValue := it.cueIter.Value()
+
 	if it.flags.StackNameRegexPattern != "" {
 		stackName, _ := currentValue.Label()
 		var stackNameRegexp *regexp.Regexp
@@ -127,5 +129,7 @@ func (it *StacksIterator) Next() bool {
 
 // Value returns the value from the cue.Iterator
 func (it *StacksIterator) Value() cue.Value {
+	v1, v2 := it.cueIter.Value().Expr()
+	it.log.Infof("%+v\n%+v", v1, v2[0].Lookup("Template"))
 	return it.cueIter.Value()
 }
