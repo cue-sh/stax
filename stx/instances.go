@@ -40,8 +40,8 @@ func GetBuildInstances(args []string, pkg string) []*build.Instance {
 // Process iterates over instances, filters based on flags, and applies the handler function for each
 func Process(buildInstances []*build.Instance, flags Flags, log *logger.Logger, handler instanceHandler) {
 
-	var excludeRegexp, includeRegexp, importsRegexp *regexp.Regexp
-	var excludeRegexpErr, includeRegexpErr, importsRegexpErr error
+	var excludeRegexp, includeRegexp *regexp.Regexp
+	var excludeRegexpErr, includeRegexpErr error
 
 	if flags.Exclude != "" {
 		log.Debug("Compiling --exclude regexp...")
@@ -59,25 +59,28 @@ func Process(buildInstances []*build.Instance, flags Flags, log *logger.Logger, 
 		}
 	}
 
-	if flags.Imports != "" {
-		log.Debug("Compiling --imports regexp...")
-		importsRegexp, importsRegexpErr = regexp.Compile(flags.Imports)
-		if importsRegexpErr != nil {
-			log.Fatal(importsRegexpErr)
-		}
-	}
+	// if flags.Imports != "" {
+	// 	log.Debug("Compiling --imports regexp...")
+	// 	importsRegexp, importsRegexpErr = regexp.Compile(flags.Imports)
+	// 	if importsRegexpErr != nil {
+	// 		log.Fatal(importsRegexpErr)
+	// 	}
+	// }
 
 	log.Debug("Iterating", len(buildInstances), "build instances...")
 	for _, buildInstance := range buildInstances {
+		// log.Info(i)
+		// log.Infof("%+v\n", buildInstance.Deps)
+		// log.Infof("%+v\n", buildInstance.ImportPaths)
 
-		log.Infof("%+v\n", buildInstance.Deps)
-		for _, file := range buildInstance.Files {
-			log.Infof("%+v\n", file.Filename)
-			for _, imp := range file.Imports {
-				log.Infof("  %+v\n", imp.Path.Value)
-			}
-			log.Info("\n")
-		}
+		// for _, file := range buildInstance.Files {
+		// 	log.Infof("%+v\n", file.Filename)
+		// 	for _, imp := range file.Imports {
+		// 		log.Infof("  %+v\n", imp.Name)
+		// 		log.Infof("  %+v\n", imp.Path.Value)
+		// 	}
+		// 	log.Info("\n")
+		// }
 
 		if excludeRegexp != nil && excludeRegexp.MatchString(buildInstance.DisplayPath) {
 			log.Debug("Excluded via --exlude: ", buildInstance.DisplayPath)
@@ -89,20 +92,20 @@ func Process(buildInstances []*build.Instance, flags Flags, log *logger.Logger, 
 			continue
 		}
 
-		if importsRegexp != nil {
-			var found bool
+		// if importsRegexp != nil {
+		// 	var found bool
 
-			for _, importPath := range buildInstance.ImportPaths {
-				if importsRegexp.MatchString(importPath) {
-					found = true
-				}
-			}
+		// 	for _, importPath := range buildInstance.ImportPaths {
+		// 		if importsRegexp.MatchString(importPath) {
+		// 			found = true
+		// 		}
+		// 	}
 
-			if !found {
-				log.Debug("NOT included via --imports: ", buildInstance.DisplayPath)
-				continue
-			}
-		}
+		// 	if !found {
+		// 		log.Debug("NOT included via --imports: ", buildInstance.DisplayPath)
+		// 		continue
+		// 	}
+		// }
 
 		// A cue instance defines a single configuration based on a collection of underlying CUE files.
 		// cue.Build is designed to produce a single cue.Instance from n build.Instances
@@ -110,7 +113,9 @@ func Process(buildInstances []*build.Instance, flags Flags, log *logger.Logger, 
 		// contains relevant path/file information related to the stack
 		// here we cue.Build one at a time so we can maintain a 1:1:1:1 between
 		// build.Instance, cue.Instance, cue.Value, and Stack
-		cueInstance := cue.Build([]*build.Instance{buildInstance})[0]
+		cueInstances := cue.Build([]*build.Instance{buildInstance})
+		// log.Infof("%d cue instances\n", len(cueInstances))
+		cueInstance := cueInstances[0]
 		if cueInstance.Err != nil {
 			// parse errors will be exposed here
 			log.Error(cueInstance.Err, cueInstance.Err.Position())

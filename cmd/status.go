@@ -31,7 +31,7 @@ If the stack does not exist status will return an error.
 
 		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
 			log.Debug("status command processing...")
-			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)
+			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, buildInstance, flags, log)
 			if stacksIteratorErr != nil {
 				log.Fatal(stacksIteratorErr)
 			}

@@ -28,7 +28,7 @@ For each stack, events will query CloudFormation and return a list of events.`,
 		buildInstances := stx.GetBuildInstances(args, "cfn")
 
 		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
-			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)
+			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, buildInstance, flags, log)
 			if stacksIteratorErr != nil {
 				log.Fatal(stacksIteratorErr)
 			}
