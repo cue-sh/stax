@@ -55,8 +55,8 @@ applied to the credentials being used! **
 					log.Error(decodeErr)
 					continue
 				}
-
-				log.Infof("%s %s ?\nEnter the name of the stack to confirm.\n▶︎", au.Red("DELETE"), au.Magenta(stack.Name))
+				log.Infof("%s %s %s\n", au.Red("You are about to DELETE"), au.Magenta(stack.Name), au.Red("."))
+				log.Infof("%s\n%s\n%s", au.Index(255-88, "Are you sure you want to DELETE this stack?"), au.Gray(11, "Enter the name of the stack to confirm."), au.Gray(11, "▶︎"))
 				var input string
 				fmt.Scanln(&input)
 
