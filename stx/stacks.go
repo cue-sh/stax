@@ -137,24 +137,35 @@ func (it *StacksIterator) Next() bool {
 		imports := strings.ReplaceAll(it.flags.Imports, " ", "")
 		splits := strings.Split(imports, ":")
 		importStr := splits[len(splits)-1]
+		// TODO: This needs work... we'd like `github.com/TangoGroup/sre/Resources/RDS.AuroraCluster`
+		// to split into `github.com/TangoGroup/sre/Resources/RDS` and `AuroraCluster`, but we can't do a naive split on `.`,
+		// because it will split github.com
 		importSplits := strings.Split(importStr, ".")
 		idx := strings.LastIndex(importStr, ".")
 
 		var importPath, importField string
 		if len(importSplits) > 1 {
-			// importPath = importSplits[0]
-			// importField = importSplits[1]
 			importPath = importStr[0:idx]
 			importField = importStr[idx+1:]
 		} else {
-			// importPath = importSplits[0]
-			// importField = ""
 			importPath = importStr[0:]
 			importField = ""
 		}
 		it.log.Infof("importStr: %+v\n", importStr)
 		it.log.Info("importPath", importPath)
 		it.log.Info("importField", importField)
+
+		hasImport := false
+		for _, imp := range it.buildInstance.Imports {
+			if imp.ImportPath == importPath {
+				hasImport = true
+			}
+		}
+
+		if !hasImport {
+			return it.Next()
+		}
+
 		var elems []string
 		if len(splits) > 1 {
 			elems = splits[0 : len(splits)-1]
