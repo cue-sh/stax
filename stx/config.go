@@ -34,12 +34,14 @@ Cmd: {
 		}
 	}
 }
+PackageName: string | *"cfn"
 `
 
 // Config holds config values parsed from config.stx.cue files
 type Config struct {
 	CueRoot     string
 	OsSeparator string
+	PackageName string
 	Auth        struct {
 		AwsVault struct {
 			SourceProfile string
