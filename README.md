@@ -29,9 +29,3 @@ If no args are present after <command>, stx will default to using `./...` as a w
 - `save`       Saves stack outputs as importable libraries to cue.mod
 - `status`     Returns a stack status if it exists
 - `notify`     Creates a light http server to listen for stack events from sns
-
-### Roadmap
-
-- Add color to yaml output of `print`
-- Add sts, sdf, exe, and events commands
-- Add config options to use ykman for automatic mfa retrieval
