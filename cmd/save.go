@@ -22,22 +22,28 @@ var saveCmd = &cobra.Command{
 	
 For each stack that has Outputs defined, save will query CloudFormation
 and write the Outputs as cue-formatted key:value pairs. Each stack will be
-saved as its own file with a .out.cue extension. 
+saved as its own file with a .out.cue extension.
 
-By default the files will be stored in the same directory as the stack was defined,
-but this can be overridden in config.stx.cue with:
+The outputs do not themselves need to be defined in Cue. For example if you have
+stacks that were deployed with some other tool, all you need is the stack name,
+profile, and region to be defined in Cue. From there stx will pull outputs from
+the CloudFormation API.
+
+By default the output files will be stored in the same directory as the stack was
+defined, but this can be overridden in config.stx.cue via:
 
 Cmd: Save: OutFilePrefix: ""
 
-For example if you want all your file viewer to group output files together you could
-set the prefix to "z-" to get them grouped at the bottom. To get them grouped together
-at the top, set the prefix to something like "0-" or "0ut-".
+This string is completely arbitrary, and it supports directories if ending with a "/".
 
-This string is completely arbitrary and up to you, and it supports directories if ending
-with a "/".
+For example if you want your file viewer to group output files together, you could
+set the prefix to "z-" to get them grouped at the bottom. To get them grouped together
+at the top, set the prefix to something like "0-" or "0ut-" as examples. To put them
+in a subfolder set the prefix to something like "outputs/"
 
 NOTE: Cue will not load files that begin with underscore, so avoid setting prefix to "_"
 or any string that begins with "_".
+
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 
@@ -46,7 +52,7 @@ or any string that begins with "_".
 
 		buildInstances := stx.GetBuildInstances(args, config.PackageName)
 
-		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
+		stx.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
 			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)
 			if stacksIteratorErr != nil {
 				log.Fatal(stacksIteratorErr)

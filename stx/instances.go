@@ -1,6 +1,7 @@
 package stx
 
 import (
+	"path/filepath"
 	"regexp"
 
 	"cuelang.org/go/cue"
@@ -15,14 +16,14 @@ type instanceHandler func(*build.Instance, *cue.Instance)
 
 // GetBuildInstances loads and parses cue files and returns a list of build instances
 func GetBuildInstances(args []string, pkg string) []*build.Instance {
-	const syntaxVersion = -1000 + 13
+	// const syntaxVersion = -1000 + 13
 
 	config := load.Config{
 		Package: pkg,
 		Context: build.NewContext(
 			build.ParseFile(func(name string, src interface{}) (*ast.File, error) {
 				return parser.ParseFile(name, src,
-					parser.FromVersion(syntaxVersion),
+					parser.FromVersion(parser.Latest),
 					parser.ParseComments,
 				)
 			})),
@@ -38,7 +39,7 @@ func GetBuildInstances(args []string, pkg string) []*build.Instance {
 }
 
 // Process iterates over instances, filters based on flags, and applies the handler function for each
-func Process(buildInstances []*build.Instance, flags Flags, log *logger.Logger, handler instanceHandler) {
+func Process(config *Config, buildInstances []*build.Instance, flags Flags, log *logger.Logger, handler instanceHandler) {
 
 	var excludeRegexp, includeRegexp *regexp.Regexp
 	var excludeRegexpErr, includeRegexpErr error
@@ -61,6 +62,17 @@ func Process(buildInstances []*build.Instance, flags Flags, log *logger.Logger, 
 
 	log.Debug("Iterating", len(buildInstances), "build instances...")
 	for _, buildInstance := range buildInstances {
+
+		// if user set save outfileprefix which ends with "/" (*nix) or "\" (win)
+		// don't process that as a build instance
+		outFilePrefix := config.Cmd.Save.OutFilePrefix
+		if len(outFilePrefix) > 0 && outFilePrefix[len(outFilePrefix)-1:] == config.OsSeparator {
+			outFolderName := outFilePrefix[:len(outFilePrefix)-1]
+			if filepath.Base(buildInstance.Dir) == outFolderName {
+				continue
+			}
+		}
+
 		if excludeRegexp != nil && excludeRegexp.MatchString(buildInstance.DisplayPath) {
 			log.Debug("Excluded via --exlude: ", buildInstance.DisplayPath)
 			continue

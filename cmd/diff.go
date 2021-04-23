@@ -34,7 +34,7 @@ Diff is an implementation of https://github.com/homeport/dyff
 
 		buildInstances := stx.GetBuildInstances(args, config.PackageName)
 
-		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
+		stx.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
 			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)
 			if stacksIteratorErr != nil {
 				log.Fatal(stacksIteratorErr)
