@@ -24,10 +24,10 @@ For each stack that has Outputs defined, save will query CloudFormation
 and write the Outputs as cue-formatted key:value pairs. Each stack will be
 saved as its own file with a .out.cue extension.
 
-The outputs do not themselves need to be defined in Cue. For example if you have
-stacks that were deployed with some other tool, all you need is the stack name,
-profile, and region to be defined in Cue. From there stx will pull outputs from
-the CloudFormation API.
+The outputs themselves do not need to be defined in Cue. For example if you
+want to reference outputs in stacks that were deployed with some other tool,
+all you need is the stack name, profile, and region to be defined in Cue.
+From there stx will pull outputs from the CloudFormation API.
 
 By default the output files will be stored in the same directory as the stack was
 defined, but this can be overridden in config.stx.cue via:
