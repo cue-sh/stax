@@ -1,7 +1,6 @@
 package stx
 
 import (
-	"path/filepath"
 	"regexp"
 
 	"cuelang.org/go/cue"
@@ -62,11 +61,6 @@ func Process(buildInstances []*build.Instance, flags Flags, log *logger.Logger, 
 
 	log.Debug("Iterating", len(buildInstances), "build instances...")
 	for _, buildInstance := range buildInstances {
-		if filepath.Base(buildInstance.Dir) == "cfnout" {
-			// don't process output folders as build instances
-			continue
-		}
-
 		if excludeRegexp != nil && excludeRegexp.MatchString(buildInstance.DisplayPath) {
 			log.Debug("Excluded via --exlude: ", buildInstance.DisplayPath)
 			continue

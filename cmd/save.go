@@ -67,7 +67,7 @@ as spaces or hyphens will be removed from folder and package names.
 					continue
 				}
 
-				saveErr := saveStackOutputs(buildInstance, stack)
+				saveErr := saveStackOutputs(config, buildInstance, stack)
 				if saveErr != nil {
 					log.Error(saveErr)
 				}
@@ -76,7 +76,7 @@ as spaces or hyphens will be removed from folder and package names.
 	},
 }
 
-func saveStackOutputs(buildInstance *build.Instance, stack stx.Stack) error {
+func saveStackOutputs(config *stx.Config, buildInstance *build.Instance, stack stx.Stack) error {
 
 	// get a session and cloudformation service client
 	session := stx.GetSession(stack.Profile)
@@ -92,12 +92,11 @@ func saveStackOutputs(buildInstance *build.Instance, stack stx.Stack) error {
 		return nil
 	}
 
-	cueOutPath := buildInstance.Dir + "/cfnout/"
-	fileName := cueOutPath + stack.Name + ".out.cue"
+	fileName := buildInstance.Dir + "/" + config.Cmd.Save.OutFilePrefix + stack.Name + ".out.cue"
 	log.Infof("%s %s %s %s\n", au.White("Saving"), au.Magenta(stack.Name), au.White("⤏"), fileName)
 
 	// create the .out.cue file
-	result := "package cfnout" + "\n\n\"" + stack.Name + "\": {\n"
+	result := "package outputs" + "\n\n\"" + stack.Name + "\": {\n"
 	// convert cloudformation outputs into simple key:value pairs
 	for _, output := range describeStacksOutput.Stacks[0].Outputs {
 		result += fmt.Sprintf("\"%s\":\"%s\"\n", aws.StringValue(output.OutputKey), aws.StringValue(output.OutputValue))
@@ -112,7 +111,10 @@ func saveStackOutputs(buildInstance *build.Instance, stack stx.Stack) error {
 	}
 
 	// save it!
-	os.MkdirAll(cueOutPath, 0766)
+	if len(config.Cmd.Save.OutFilePrefix) > 0 && config.Cmd.Save.OutFilePrefix[len(config.Cmd.Save.OutFilePrefix)-1:] == config.OsSeparator {
+		os.MkdirAll(buildInstance.Dir+"/"+config.Cmd.Save.OutFilePrefix, 0766)
+	}
+
 	writeErr := ioutil.WriteFile(fileName, []byte(cueOutput), 0644)
 	if writeErr != nil {
 		return writeErr

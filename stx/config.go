@@ -33,6 +33,9 @@ Cmd: {
 			TopicArn: string | *""
 		}
 	}
+	Save: {
+		OutFilePrefix: string | *""
+	}
 }
 PackageName: string | *"cfn"
 `
@@ -58,6 +61,9 @@ type Config struct {
 			Notify struct {
 				Endpoint, TopicArn string
 			}
+		}
+		Save struct {
+			OutFilePrefix string
 		}
 	}
 }

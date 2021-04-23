@@ -469,7 +469,7 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 		log.Check()
 
 		if flags.DeploySave {
-			saveErr := saveStackOutputs(buildInstance, stack)
+			saveErr := saveStackOutputs(config, buildInstance, stack)
 			if saveErr != nil {
 				log.Fatal(saveErr)
 			}
