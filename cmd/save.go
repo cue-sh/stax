@@ -24,26 +24,20 @@ For each stack that has Outputs defined, save will query CloudFormation
 and write the Outputs as cue-formatted key:value pairs. Each stack will be
 saved as its own file with a .out.cue extension. 
 
-To determine where these .out.cue files are saved, stx uses the path of the
-stack's template.cfn.cue file relative to the cue root. If no template.cfn.cue
-file is found, stx will use the path of the concrete leaf, relative to cue root.
+By default the files will be stored in the same directory as the stack was defined,
+but this can be overridden in config.stx.cue with:
 
-As an example, consider the following tree:
+Cmd: Save: OutFilePrefix: ""
 
-infrastructure/
-|-cue/                                      ("cue root")
-| |-cue.mod/
-| | |-usr/cfn.out/vpc/dev-vpc-usw2.out.cue  (outputs file)
-| |-vpc/
-| | |-template.cfn.cue                      (template)
+For example if you want all your file viewer to group output files together you could
+set the prefix to "z-" to get them grouped at the bottom. To get them grouped together
+at the top, set the prefix to something like "0-" or "0ut-".
 
-Running stx save from infrastructure/cue/vpc/ will find the stack "dev-vpc-usw2"
-defined in the template.cfn.cue file. stx will use vpc/ as the path relative to
-cue root to create vpc/ as the path relative to cfn.out.
+This string is completely arbitrary and up to you, and it supports directories if ending
+with a "/".
 
-The outputs file in this example will declare its cue package as "vpc" since
-that is the folder in which it is contained. Note that special characters such
-as spaces or hyphens will be removed from folder and package names.
+NOTE: Cue will not load files that begin with underscore, so avoid setting prefix to "_"
+or any string that begins with "_".
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 
