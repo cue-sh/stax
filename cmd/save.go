@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
@@ -24,28 +22,28 @@ var saveCmd = &cobra.Command{
 	
 For each stack that has Outputs defined, save will query CloudFormation
 and write the Outputs as cue-formatted key:value pairs. Each stack will be
-saved as its own file with a .out.cue extension. 
+saved as its own file with a .out.cue extension.
 
-To determine where these .out.cue files are saved, stx uses the path of the
-stack's template.cfn.cue file relative to the cue root. If no template.cfn.cue
-file is found, stx will use the path of the concrete leaf, relative to cue root.
+The outputs themselves do not need to be defined in Cue. For example if you
+want to reference outputs in stacks that were deployed with some other tool,
+all you need is the stack name, profile, and region to be defined in Cue.
+From there stx will pull outputs from the CloudFormation API.
 
-As an example, consider the following tree:
+By default the output files will be stored in the same directory as the stack was
+defined, but this can be overridden in config.stx.cue via:
 
-infrastructure/
-|-cue/                                      ("cue root")
-| |-cue.mod/
-| | |-usr/cfn.out/vpc/dev-vpc-usw2.out.cue  (outputs file)
-| |-vpc/
-| | |-template.cfn.cue                      (template)
+Cmd: Save: OutFilePrefix: ""
 
-Running stx save from infrastructure/cue/vpc/ will find the stack "dev-vpc-usw2"
-defined in the template.cfn.cue file. stx will use vpc/ as the path relative to
-cue root to create vpc/ as the path relative to cfn.out.
+This string is completely arbitrary, and it supports directories if ending with a "/".
 
-The outputs file in this example will declare its cue package as "vpc" since
-that is the folder in which it is contained. Note that special characters such
-as spaces or hyphens will be removed from folder and package names.
+For example if you want your file viewer to group output files together, you could
+set the prefix to "z-" to get them grouped at the bottom. To get them grouped together
+at the top, set the prefix to something like "0-" or "0ut-" as examples. To put them
+in a subfolder set the prefix to something like "outputs/"
+
+NOTE: Cue will not load files that begin with underscore, so avoid setting prefix to "_"
+or any string that begins with "_".
+
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 
@@ -54,7 +52,7 @@ as spaces or hyphens will be removed from folder and package names.
 
 		buildInstances := stx.GetBuildInstances(args, config.PackageName)
 
-		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
+		stx.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
 			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)
 			if stacksIteratorErr != nil {
 				log.Fatal(stacksIteratorErr)
@@ -69,7 +67,7 @@ as spaces or hyphens will be removed from folder and package names.
 					continue
 				}
 
-				saveErr := saveStackOutputs(buildInstance, stack)
+				saveErr := saveStackOutputs(config, buildInstance, stack)
 				if saveErr != nil {
 					log.Error(saveErr)
 				}
@@ -78,7 +76,7 @@ as spaces or hyphens will be removed from folder and package names.
 	},
 }
 
-func saveStackOutputs(buildInstance *build.Instance, stack stx.Stack) error {
+func saveStackOutputs(config *stx.Config, buildInstance *build.Instance, stack stx.Stack) error {
 
 	// get a session and cloudformation service client
 	session := stx.GetSession(stack.Profile)
@@ -94,35 +92,11 @@ func saveStackOutputs(buildInstance *build.Instance, stack stx.Stack) error {
 		return nil
 	}
 
-	// cfn.out files are store under cue.mod/usr/cfn.out with the same relative path as the stacks cue instance
-	// for example a stack with a template declared in cue/engineering/eks/cluster
-	// with a concrete leaf in cue/engineering/eks/cluster/dev-usw2
-	// would store outputs in cue.mod/usr/cfn.out/cue/engineering/eks/cluster
-	instancePath := buildInstance.Dir
-	// in case no template.cfn.cue file is found, use the instance (relative) path
-	cueOutPath := strings.Replace(instancePath, buildInstance.Root, "", 1)
-
-	// look for the template.cfn.cue file for the current build instance
-	dirs := strings.Split(instancePath, config.OsSeparator)
-	path := ""
-	// traverse the directory tree starting from leaf going up to successive parents
-	for i := len(dirs); i > 0; i-- {
-		path = strings.Join(dirs[:i], config.OsSeparator)
-		// look for the template file
-		if _, err := os.Stat(path + config.OsSeparator + "template.cfn.cue"); !os.IsNotExist(err) {
-			break // found it!
-		}
-	}
-	if path != "" {
-		cueOutPath = strings.Replace(path, buildInstance.Root, "", 1)
-	}
-	cueOutPath = strings.Replace(buildInstance.Root+"/cue.mod/usr/cfn.out"+cueOutPath, "-", "", -1)
-	fileName := cueOutPath + "/" + stack.Name + ".out.cue"
+	fileName := buildInstance.Dir + "/" + config.Cmd.Save.OutFilePrefix + stack.Name + ".out.cue"
 	log.Infof("%s %s %s %s\n", au.White("Saving"), au.Magenta(stack.Name), au.White("⤏"), fileName)
 
 	// create the .out.cue file
-	cuePackage := filepath.Base(cueOutPath)
-	result := "package " + cuePackage + "\n\n\"" + stack.Name + "\": {\n"
+	result := "package outputs" + "\n\n\"" + stack.Name + "\": {\n"
 	// convert cloudformation outputs into simple key:value pairs
 	for _, output := range describeStacksOutput.Stacks[0].Outputs {
 		result += fmt.Sprintf("\"%s\":\"%s\"\n", aws.StringValue(output.OutputKey), aws.StringValue(output.OutputValue))
@@ -137,8 +111,11 @@ func saveStackOutputs(buildInstance *build.Instance, stack stx.Stack) error {
 	}
 
 	// save it!
-	os.MkdirAll(cueOutPath, 0766)
-	writeErr := ioutil.WriteFile(fileName, cueOutput, 0644)
+	if len(config.Cmd.Save.OutFilePrefix) > 0 && config.Cmd.Save.OutFilePrefix[len(config.Cmd.Save.OutFilePrefix)-1:] == config.OsSeparator {
+		os.MkdirAll(buildInstance.Dir+"/"+config.Cmd.Save.OutFilePrefix, 0766)
+	}
+
+	writeErr := ioutil.WriteFile(fileName, []byte(cueOutput), 0644)
 	if writeErr != nil {
 		return writeErr
 	}

@@ -89,7 +89,7 @@ first.
 		workingGraph := graph.NewGraph()
 		buildInstances := stx.GetBuildInstances(args, config.PackageName)
 
-		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
+		stx.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
 			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)
 			if stacksIteratorErr != nil {
 				log.Fatal(stacksIteratorErr)
@@ -469,7 +469,7 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 		log.Check()
 
 		if flags.DeploySave {
-			saveErr := saveStackOutputs(buildInstance, stack)
+			saveErr := saveStackOutputs(config, buildInstance, stack)
 			if saveErr != nil {
 				log.Fatal(saveErr)
 			}
