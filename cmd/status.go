@@ -8,7 +8,7 @@ import (
 	"cuelang.org/go/cue/build"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/cue-sh/stax/stax"
+	"github.com/cue-sh/stax/internal"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
@@ -25,27 +25,27 @@ If the stack does not exist status will return an error.
 		//TODO add debug messages
 		log.Debug("status command executing...")
 		defer log.Flush()
-		stax.EnsureVaultSession(config)
+		internal.EnsureVaultSession(config)
 
-		buildInstances := stax.GetBuildInstances(args, config.PackageName)
+		buildInstances := internal.GetBuildInstances(args, config.PackageName)
 
-		stax.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
+		internal.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
 			log.Debug("status command processing...")
-			stacksIterator, stacksIteratorErr := stax.NewStacksIterator(cueInstance, flags, log)
+			stacksIterator, stacksIteratorErr := internal.NewStacksIterator(cueInstance, flags, log)
 			if stacksIteratorErr != nil {
 				log.Fatal(stacksIteratorErr)
 			}
 
 			for stacksIterator.Next() {
 				stackValue := stacksIterator.Value()
-				var stack stax.Stack
+				var stack internal.Stack
 				decodeErr := stackValue.Decode(&stack)
 				if decodeErr != nil {
 					log.Error(decodeErr)
 					continue
 				}
 
-				session := stax.GetSession(stack.Profile)
+				session := internal.GetSession(stack.Profile)
 				cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
 
 				// use a struct to pass a string, it's GC'd!

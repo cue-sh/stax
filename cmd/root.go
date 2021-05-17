@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/cue-sh/stax/internal"
 	"github.com/cue-sh/stax/logger"
-	"github.com/cue-sh/stax/stax"
 	"github.com/logrusorgru/aurora"
 
 	"github.com/spf13/cobra"
 )
 
-var au aurora.Aurora    // console output color
-var config *stax.Config // holds settings in config.stax.cue files
-var flags stax.Flags    // holds command line flags
-var log *logger.Logger  // commong log
+var au aurora.Aurora        // console output color
+var config *internal.Config // holds settings in config.internal.cue files
+var flags internal.Flags    // holds command line flags
+var log *logger.Logger      // commong log
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -42,13 +42,13 @@ func init() {
 
 		if config == nil {
 			log.Debug("Loading config...")
-			config = stax.LoadConfig(log)
+			config = internal.LoadConfig(log)
 		}
 		log.Debugf("Loaded flags %+v\n", flags)
 		log.Debug("Root command initialized.")
 	})
 
-	flags = stax.Flags{}
+	flags = internal.Flags{}
 	rootCmd.PersistentFlags().StringVarP(&flags.Environment, "environment", "e", "", "Includes only stacks with this environment.")
 	rootCmd.PersistentFlags().StringVar(&flags.Profile, "profile", "", "Includes only stacks with this profile")
 	rootCmd.PersistentFlags().StringVarP(&flags.RegionCode, "region-code", "r", "", "Includes only stacks with this region code")

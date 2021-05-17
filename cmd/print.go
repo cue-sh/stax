@@ -3,11 +3,10 @@ package cmd
 import (
 	"strings"
 
-	"github.com/cue-sh/stax/stax"
-
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
 	"cuelang.org/go/pkg/encoding/yaml"
+	"github.com/cue-sh/stax/internal"
 	"github.com/spf13/cobra"
 )
 
@@ -30,11 +29,11 @@ Each stack will be converted to YAML then printed to stdout.`,
 		}
 
 		log.Debug("Getting build instances...")
-		buildInstances := stax.GetBuildInstances(args, config.PackageName)
+		buildInstances := internal.GetBuildInstances(args, config.PackageName)
 		log.Debug("Processing build instances...")
-		stax.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
+		internal.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
 
-			stacksIterator, stacksIteratorErr := stax.NewStacksIterator(cueInstance, flags, log)
+			stacksIterator, stacksIteratorErr := internal.NewStacksIterator(cueInstance, flags, log)
 			if stacksIteratorErr != nil {
 				log.Fatal(stacksIteratorErr)
 			}
@@ -49,7 +48,7 @@ Each stack will be converted to YAML then printed to stdout.`,
 
 			for stacksIterator.Next() {
 				stackValue := stacksIterator.Value()
-				var stack stax.Stack
+				var stack internal.Stack
 				decodeErr := stackValue.Decode(&stack)
 				if decodeErr != nil {
 					if !flags.PrintHideErrors {

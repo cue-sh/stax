@@ -8,7 +8,7 @@ import (
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
 	"cuelang.org/go/pkg/encoding/yaml"
-	"github.com/cue-sh/stax/stax"
+	"github.com/cue-sh/stax/internal"
 	"github.com/spf13/cobra"
 )
 
@@ -18,7 +18,7 @@ var exportCmd = &cobra.Command{
 	Short: "Exports cue templates as CloudFormation yml files.",
 	Long: `Export will operate over every stack found in the evaluated cue files.
 	
-The following config.stax.cue options are avilable:
+The following config.internal.cue options are avilable:
 
 Cmd: {
   Export: YmlPath: string | *"./yml"
@@ -38,17 +38,17 @@ infrastructure/
 	Run: func(cmd *cobra.Command, args []string) {
 		defer log.Flush()
 
-		buildInstances := stax.GetBuildInstances(args, config.PackageName)
+		buildInstances := internal.GetBuildInstances(args, config.PackageName)
 
-		stax.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
-			stacksIterator, stacksIteratorErr := stax.NewStacksIterator(cueInstance, flags, log)
+		internal.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
+			stacksIterator, stacksIteratorErr := internal.NewStacksIterator(cueInstance, flags, log)
 			if stacksIteratorErr != nil {
 				log.Fatal(stacksIteratorErr)
 			}
 
 			for stacksIterator.Next() {
 				stackValue := stacksIterator.Value()
-				var stack stax.Stack
+				var stack internal.Stack
 				decodeErr := stackValue.Decode(&stack)
 				if decodeErr != nil {
 					log.Error(decodeErr)
@@ -63,7 +63,7 @@ infrastructure/
 	},
 }
 
-func saveStackAsYml(stack stax.Stack, buildInstance *build.Instance, stackValue cue.Value) (string, error) {
+func saveStackAsYml(stack internal.Stack, buildInstance *build.Instance, stackValue cue.Value) (string, error) {
 	dir := filepath.Clean(config.CueRoot + "/" + config.Cmd.Export.YmlPath + "/" + stack.Profile)
 	os.MkdirAll(dir, 0755)
 

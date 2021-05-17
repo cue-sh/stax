@@ -10,7 +10,7 @@ import (
 	"cuelang.org/go/cue/format"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/cue-sh/stax/stax"
+	"github.com/cue-sh/stax/internal"
 	"github.com/spf13/cobra"
 )
 
@@ -30,7 +30,7 @@ all you need is the stack name, profile, and region to be defined in Cue.
 From there stax will pull outputs from the CloudFormation API.
 
 By default the output files will be stored in the same directory as the stack was
-defined, but this can be overridden in config.stax.cue via:
+defined, but this can be overridden in config.internal.cue via:
 
 Cmd: Save: OutFilePrefix: ""
 
@@ -48,19 +48,19 @@ or any string that begins with "_".
 	Run: func(cmd *cobra.Command, args []string) {
 
 		defer log.Flush()
-		stax.EnsureVaultSession(config)
+		internal.EnsureVaultSession(config)
 
-		buildInstances := stax.GetBuildInstances(args, config.PackageName)
+		buildInstances := internal.GetBuildInstances(args, config.PackageName)
 
-		stax.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
-			stacksIterator, stacksIteratorErr := stax.NewStacksIterator(cueInstance, flags, log)
+		internal.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
+			stacksIterator, stacksIteratorErr := internal.NewStacksIterator(cueInstance, flags, log)
 			if stacksIteratorErr != nil {
 				log.Fatal(stacksIteratorErr)
 			}
 
 			for stacksIterator.Next() {
 				stackValue := stacksIterator.Value()
-				var stack stax.Stack
+				var stack internal.Stack
 				decodeErr := stackValue.Decode(&stack)
 				if decodeErr != nil {
 					log.Error(decodeErr)
@@ -76,10 +76,10 @@ or any string that begins with "_".
 	},
 }
 
-func saveStackOutputs(config *stax.Config, buildInstance *build.Instance, stack stax.Stack) error {
+func saveStackOutputs(config *internal.Config, buildInstance *build.Instance, stack internal.Stack) error {
 
 	// get a session and cloudformation service client
-	session := stax.GetSession(stack.Profile)
+	session := internal.GetSession(stack.Profile)
 	cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
 	describeStacksInput := cloudformation.DescribeStacksInput{StackName: aws.String(stack.Name)}
 	describeStacksOutput, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)

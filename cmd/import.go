@@ -5,7 +5,7 @@ import (
 	"cuelang.org/go/encoding/json"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/cue-sh/stax/stax"
+	"github.com/cue-sh/stax/internal"
 	"github.com/ghodss/yaml"
 	"github.com/spf13/cobra"
 )
@@ -37,10 +37,10 @@ Stacks pattern, and save it as a formatted Cue file.
 
 		flags.StackNameRegexPattern = "^" + flags.ImportStack + "$"
 
-		stax.EnsureVaultSession(config)
+		internal.EnsureVaultSession(config)
 
 		// get a session and cloudformation service client
-		session := stax.GetSession(flags.Profile)
+		session := internal.GetSession(flags.Profile)
 		cfn := cloudformation.New(session, aws.NewConfig().WithRegion(flags.ImportRegion))
 		log.Infof("%s %s...", au.White("Importing"), au.Magenta(flags.ImportStack))
 

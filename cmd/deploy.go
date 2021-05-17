@@ -20,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/cue-sh/stax/graph"
+	"github.com/cue-sh/stax/internal"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -34,7 +35,7 @@ func init() {
 }
 
 type deployArgs struct {
-	stack         stax.Stack
+	stack         internal.Stack
 	stackValue    cue.Value
 	buildInstance *build.Instance
 }
@@ -49,7 +50,7 @@ For each stack, a changeset is first created, and the proposed changes are
 displayed. At this point you have the option to execute the changeset
 before moving on to the next stack.
 
-The following config.stax.cue options are available:
+The following config.internal.cue options are available:
 
 Cmd: {
   Deploy: {
@@ -78,7 +79,7 @@ first.
 	Run: func(cmd *cobra.Command, args []string) {
 
 		defer log.Flush()
-		stax.EnsureVaultSession(config)
+		internal.EnsureVaultSession(config)
 
 		if flags.DeployDeps {
 			flags.DeploySave = true
@@ -86,10 +87,10 @@ first.
 
 		availableStacks := make(map[string]deployArgs)
 		workingGraph := graph.NewGraph()
-		buildInstances := stax.GetBuildInstances(args, config.PackageName)
+		buildInstances := internal.GetBuildInstances(args, config.PackageName)
 
-		stax.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
-			stacksIterator, stacksIteratorErr := stax.NewStacksIterator(cueInstance, flags, log)
+		internal.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
+			stacksIterator, stacksIteratorErr := internal.NewStacksIterator(cueInstance, flags, log)
 			if stacksIteratorErr != nil {
 				log.Fatal(stacksIteratorErr)
 			}
@@ -98,7 +99,7 @@ first.
 			// we need to gather ALL the stacks first primarily to support dependencies
 			for stacksIterator.Next() {
 				stackValue := stacksIterator.Value()
-				var stack stax.Stack
+				var stack internal.Stack
 				decodeErr := stackValue.Decode(&stack)
 				if decodeErr != nil {
 					if flags.DeployDeps {
@@ -134,7 +135,7 @@ first.
 	},
 }
 
-func deployStack(stack stax.Stack, buildInstance *build.Instance, stackValue cue.Value) {
+func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue cue.Value) {
 
 	fileName, saveErr := saveStackAsYml(stack, buildInstance, stackValue)
 	if saveErr != nil {
@@ -145,7 +146,7 @@ func deployStack(stack stax.Stack, buildInstance *build.Instance, stackValue cue
 
 	// get a session and cloudformation service client
 	log.Debugf("\nGetting session for profile %s\n", stack.Profile)
-	session := stax.GetSession(stack.Profile)
+	session := internal.GetSession(stack.Profile)
 	awsCfg := aws.NewConfig().WithRegion(stack.Region)
 	cfn := cloudformation.New(session, awsCfg)
 
@@ -235,7 +236,7 @@ func deployStack(stack stax.Stack, buildInstance *build.Instance, stackValue cue
 
 				if behavior.SopsProfile != "" {
 					// decrypt the file contents
-					yamlBytes, yamlBytesErr = stax.DecryptSecrets(filepath.Clean(buildInstance.Root+"/"+path), behavior.SopsProfile)
+					yamlBytes, yamlBytesErr = internal.DecryptSecrets(filepath.Clean(buildInstance.Root+"/"+path), behavior.SopsProfile)
 				} else {
 					// just pull the file contents directly
 					yamlBytes, yamlBytesErr = ioutil.ReadFile(filepath.Clean(buildInstance.Root + "/" + path))
