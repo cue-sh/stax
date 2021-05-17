@@ -3,7 +3,7 @@ package cmd
 import (
 	"strings"
 
-	"github.com/TangoGroup/stx/stx"
+	"github.com/cue-sh/stax/stax"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
@@ -30,11 +30,11 @@ Each stack will be converted to YAML then printed to stdout.`,
 		}
 
 		log.Debug("Getting build instances...")
-		buildInstances := stx.GetBuildInstances(args, config.PackageName)
+		buildInstances := stax.GetBuildInstances(args, config.PackageName)
 		log.Debug("Processing build instances...")
-		stx.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
+		stax.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
 
-			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)
+			stacksIterator, stacksIteratorErr := stax.NewStacksIterator(cueInstance, flags, log)
 			if stacksIteratorErr != nil {
 				log.Fatal(stacksIteratorErr)
 			}
@@ -49,7 +49,7 @@ Each stack will be converted to YAML then printed to stdout.`,
 
 			for stacksIterator.Next() {
 				stackValue := stacksIterator.Value()
-				var stack stx.Stack
+				var stack stax.Stack
 				decodeErr := stackValue.Decode(&stack)
 				if decodeErr != nil {
 					if !flags.PrintHideErrors {

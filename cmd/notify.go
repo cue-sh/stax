@@ -29,7 +29,7 @@ light-weight http server dedicated to displaying stack events sent through SNS.
 
 To use notify, first start the server by executing the command; no options are 
 required. Notify will immediately return the http endpoint on which it is listening.
-Copy this URL and use it to configure the EndPoint option (see stx deploy --help)
+Copy this URL and use it to configure the EndPoint option (see stax deploy --help)
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		defer log.Flush()

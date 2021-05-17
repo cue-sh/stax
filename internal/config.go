@@ -1,4 +1,4 @@
-package stx
+package internal
 
 import (
 	"io/ioutil"
@@ -9,7 +9,7 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
-	"github.com/TangoGroup/stx/logger"
+	"github.com/cue-sh/stax/logger"
 )
 
 // Flags holds flags passed in from cli
@@ -20,7 +20,7 @@ type Flags struct {
 	DeployWait, DeploySave, DeployDeps, DeployPrevious                                                                   bool
 }
 
-const configCue = `package stx
+const configCue = `package internal
 Auth: {
 	AwsVault: SourceProfile: string | *""
 	Ykman: Profile: string | *""
@@ -40,7 +40,7 @@ Cmd: {
 PackageName: string | *"cfn"
 `
 
-// Config holds config values parsed from config.stx.cue files
+// Config holds config values parsed from config.stax.cue files
 type Config struct {
 	CueRoot     string
 	OsSeparator string
@@ -68,7 +68,7 @@ type Config struct {
 	}
 }
 
-// LoadConfig looks for config.stx.cue to be colocated with cue.mod and unifies that with a built-in default config schema
+// LoadConfig looks for config.stax.cue to be colocated with cue.mod and unifies that with a built-in default config schema
 func LoadConfig(log *logger.Logger) *Config {
 	wd, _ := os.Getwd()
 	separator := string(os.PathSeparator)
@@ -92,12 +92,12 @@ func LoadConfig(log *logger.Logger) *Config {
 	var buildArgs []string
 
 	// include baked-in cue config
-	configSchema := "/tmp/config.stx.cue"
+	configSchema := "/tmp/config.stax.cue"
 	ioutil.WriteFile(configSchema, []byte(configCue), 0766)
 	buildArgs = append(buildArgs, configSchema)
 
-	// look for global config in ~/.stx/config.stx.cue
-	homeConfigPath := filepath.Clean(usr.HomeDir + "/.stx/config.stx.cue")
+	// look for global config in ~/.stax/config.stax.cue
+	homeConfigPath := filepath.Clean(usr.HomeDir + "/.stax/config.stax.cue")
 	if _, err := os.Stat(homeConfigPath); !os.IsNotExist(err) {
 		log.Debug("Global config found:", homeConfigPath)
 		buildArgs = append(buildArgs, homeConfigPath)
@@ -105,8 +105,8 @@ func LoadConfig(log *logger.Logger) *Config {
 		log.Debug("Global config NOT found:", homeConfigPath)
 	}
 
-	// look for config.stx.cue colocated with cue.mod
-	localConfigPath := path + "/config.stx.cue"
+	// look for config.stax.cue colocated with cue.mod
+	localConfigPath := path + "/config.stax.cue"
 	if _, err := os.Stat(localConfigPath); !os.IsNotExist(err) {
 		log.Debug("Local config found:", localConfigPath)
 		buildArgs = append(buildArgs, localConfigPath)
@@ -115,7 +115,7 @@ func LoadConfig(log *logger.Logger) *Config {
 	}
 
 	log.Debug("Building config...")
-	buildInstances = GetBuildInstances(buildArgs, "stx")
+	buildInstances = GetBuildInstances(buildArgs, "stax")
 	cueInstances = cue.Build(buildInstances)
 	configInstance = cueInstances[0]
 	configValue = configInstance.Value()

@@ -6,9 +6,9 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
-	"github.com/TangoGroup/stx/stx"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/cue-sh/stax/stax"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
@@ -23,19 +23,19 @@ For each stack, events will query CloudFormation and return a list of events.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO add debug messages
 		defer log.Flush()
-		stx.EnsureVaultSession(config)
+		stax.EnsureVaultSession(config)
 
-		buildInstances := stx.GetBuildInstances(args, config.PackageName)
+		buildInstances := stax.GetBuildInstances(args, config.PackageName)
 
-		stx.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
-			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)
+		stax.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
+			stacksIterator, stacksIteratorErr := stax.NewStacksIterator(cueInstance, flags, log)
 			if stacksIteratorErr != nil {
 				log.Fatal(stacksIteratorErr)
 			}
 
 			for stacksIterator.Next() {
 				stackValue := stacksIterator.Value()
-				var stack stx.Stack
+				var stack stax.Stack
 				decodeErr := stackValue.Decode(&stack)
 				if decodeErr != nil {
 					log.Error(decodeErr)
@@ -43,7 +43,7 @@ For each stack, events will query CloudFormation and return a list of events.`,
 				}
 
 				// get a session and cloudformation service client
-				session := stx.GetSession(stack.Profile)
+				session := stax.GetSession(stack.Profile)
 				cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
 				describeStackEventsInput := cloudformation.DescribeStackEventsInput{StackName: aws.String(stack.Name)}
 				describeStackEventsOutput, describeStackEventsErr := cfn.DescribeStackEvents(&describeStackEventsInput)

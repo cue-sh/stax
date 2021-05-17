@@ -21,7 +21,7 @@ brews:
   -
     # Name template of the recipe
     # Default to project name
-    name: stx
+    name: stax
 
     # IDs of the archives to use.
     # Defaults to all.
@@ -85,7 +85,7 @@ brews:
 
     # Your app's description.
     # Default is empty.
-    description: "stx is the cli tool to manage cloudformation stacks written in cfn-cue"
+    description: "stax is the cli tool to manage cloudformation stacks written in cfn-cue"
 
     # Setting this will prevent goreleaser to actually try to commit the updated
     # formula - instead, the formula file will be stored on the dist folder only,

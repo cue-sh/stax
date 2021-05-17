@@ -1,4 +1,4 @@
-package stx
+package internal
 
 import (
 	"encoding/json"

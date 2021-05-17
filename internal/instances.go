@@ -1,4 +1,4 @@
-package stx
+package internal
 
 import (
 	"path/filepath"
@@ -9,7 +9,7 @@ import (
 	"cuelang.org/go/cue/build"
 	"cuelang.org/go/cue/load"
 	"cuelang.org/go/cue/parser"
-	"github.com/TangoGroup/stx/logger"
+	"github.com/cue-sh/stax/logger"
 )
 
 type instanceHandler func(*build.Instance, *cue.Instance)

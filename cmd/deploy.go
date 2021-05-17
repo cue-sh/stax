@@ -14,13 +14,12 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
-	"github.com/TangoGroup/stx/graph"
-	"github.com/TangoGroup/stx/stx"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/sns"
+	"github.com/cue-sh/stax/graph"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -35,7 +34,7 @@ func init() {
 }
 
 type deployArgs struct {
-	stack         stx.Stack
+	stack         stax.Stack
 	stackValue    cue.Value
 	buildInstance *build.Instance
 }
@@ -50,7 +49,7 @@ For each stack, a changeset is first created, and the proposed changes are
 displayed. At this point you have the option to execute the changeset
 before moving on to the next stack.
 
-The following config.stx.cue options are available:
+The following config.stax.cue options are available:
 
 Cmd: {
   Deploy: {
@@ -65,7 +64,7 @@ Use Cmd:Deploy:Notify: properties to enable the notify command to receive stack
 event notifications from SNS. The endpoint will be the http address provided by
 the notify command. If this is run behind a router, you will need to enable
 port forwarding. If port forwarding is not possible, such as in a corporate
-office setting, stx notify could be run on a remote machine such as an EC2 
+office setting, stax notify could be run on a remote machine such as an EC2 
 instance, or virtual workspace.
 
 The TopicArn is an SNS topic that is provided as a NotificationArn when
@@ -79,7 +78,7 @@ first.
 	Run: func(cmd *cobra.Command, args []string) {
 
 		defer log.Flush()
-		stx.EnsureVaultSession(config)
+		stax.EnsureVaultSession(config)
 
 		if flags.DeployDeps {
 			flags.DeploySave = true
@@ -87,10 +86,10 @@ first.
 
 		availableStacks := make(map[string]deployArgs)
 		workingGraph := graph.NewGraph()
-		buildInstances := stx.GetBuildInstances(args, config.PackageName)
+		buildInstances := stax.GetBuildInstances(args, config.PackageName)
 
-		stx.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
-			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)
+		stax.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
+			stacksIterator, stacksIteratorErr := stax.NewStacksIterator(cueInstance, flags, log)
 			if stacksIteratorErr != nil {
 				log.Fatal(stacksIteratorErr)
 			}
@@ -99,7 +98,7 @@ first.
 			// we need to gather ALL the stacks first primarily to support dependencies
 			for stacksIterator.Next() {
 				stackValue := stacksIterator.Value()
-				var stack stx.Stack
+				var stack stax.Stack
 				decodeErr := stackValue.Decode(&stack)
 				if decodeErr != nil {
 					if flags.DeployDeps {
@@ -135,7 +134,7 @@ first.
 	},
 }
 
-func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.Value) {
+func deployStack(stack stax.Stack, buildInstance *build.Instance, stackValue cue.Value) {
 
 	fileName, saveErr := saveStackAsYml(stack, buildInstance, stackValue)
 	if saveErr != nil {
@@ -146,7 +145,7 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 
 	// get a session and cloudformation service client
 	log.Debugf("\nGetting session for profile %s\n", stack.Profile)
-	session := stx.GetSession(stack.Profile)
+	session := stax.GetSession(stack.Profile)
 	awsCfg := aws.NewConfig().WithRegion(stack.Region)
 	cfn := cloudformation.New(session, awsCfg)
 
@@ -156,7 +155,7 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 	templateBody := string(templateFileBytes)
 	usr, _ := user.Current()
 
-	changeSetName := "stx-dpl-" + usr.Username + "-" + fmt.Sprintf("%x", sha1.Sum(templateFileBytes))
+	changeSetName := "stax-dpl-" + usr.Username + "-" + fmt.Sprintf("%x", sha1.Sum(templateFileBytes))
 	// validate template
 	validateTemplateInput := cloudformation.ValidateTemplateInput{
 		TemplateBody: &templateBody,
@@ -219,7 +218,7 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 		} else {
 			// load overrides
 
-			// TODO #48 stx should prompt for each Parameter input if overrides are undefined
+			// TODO #48 stax should prompt for each Parameter input if overrides are undefined
 			if len(stack.Overrides) < 0 {
 				log.Fatal("Template has Parameters but no Overrides are defined.")
 				return
@@ -236,7 +235,7 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 
 				if behavior.SopsProfile != "" {
 					// decrypt the file contents
-					yamlBytes, yamlBytesErr = stx.DecryptSecrets(filepath.Clean(buildInstance.Root+"/"+path), behavior.SopsProfile)
+					yamlBytes, yamlBytesErr = stax.DecryptSecrets(filepath.Clean(buildInstance.Root+"/"+path), behavior.SopsProfile)
 				} else {
 					// just pull the file contents directly
 					yamlBytes, yamlBytesErr = ioutil.ReadFile(filepath.Clean(buildInstance.Root + "/" + path))
@@ -257,7 +256,7 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 					return
 				}
 
-				// TODO #50 stx should error when a parameter key is duplicated among two or more overrides files
+				// TODO #50 stax should error when a parameter key is duplicated among two or more overrides files
 				if len(behavior.Map) > 0 {
 					// map the yaml key:value to parameter key:value
 					for k, v := range behavior.Map {
@@ -314,7 +313,7 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 		}
 		createChangeSetInput.SetTags(tags)
 	}
-	if config.Cmd.Deploy.Notify.TopicArn != "" { // && stx notify command is running! perhaps use unix domain sockets to test
+	if config.Cmd.Deploy.Notify.TopicArn != "" { // && stax notify command is running! perhaps use unix domain sockets to test
 		log.Infof("%s", au.Gray(11, "  Reticulating splines..."))
 
 		snsClient := sns.New(session, awsCfg)
