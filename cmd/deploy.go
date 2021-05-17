@@ -50,7 +50,7 @@ For each stack, a changeset is first created, and the proposed changes are
 displayed. At this point you have the option to execute the changeset
 before moving on to the next stack.
 
-The following config.internal.cue options are available:
+The following config.stax.cue options are available:
 
 Cmd: {
   Deploy: {

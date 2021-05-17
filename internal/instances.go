@@ -69,6 +69,7 @@ func Process(config *Config, buildInstances []*build.Instance, flags Flags, log 
 		if len(outFilePrefix) > 0 && outFilePrefix[len(outFilePrefix)-1:] == config.OsSeparator {
 			outFolderName := outFilePrefix[:len(outFilePrefix)-1]
 			if filepath.Base(buildInstance.Dir) == outFolderName {
+				log.Debugf("Skipping %s\n", outFolderName)
 				continue
 			}
 		}

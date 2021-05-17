@@ -30,7 +30,7 @@ all you need is the stack name, profile, and region to be defined in Cue.
 From there stax will pull outputs from the CloudFormation API.
 
 By default the output files will be stored in the same directory as the stack was
-defined, but this can be overridden in config.internal.cue via:
+defined, but this can be overridden in config.stax.cue via:
 
 Cmd: Save: OutFilePrefix: ""
 

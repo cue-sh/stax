@@ -12,7 +12,7 @@ import (
 )
 
 var au aurora.Aurora        // console output color
-var config *internal.Config // holds settings in config.internal.cue files
+var config *internal.Config // holds settings in config.stax.cue files
 var flags internal.Flags    // holds command line flags
 var log *logger.Logger      // commong log
 

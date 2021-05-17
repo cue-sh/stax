@@ -18,7 +18,7 @@ var exportCmd = &cobra.Command{
 	Short: "Exports cue templates as CloudFormation yml files.",
 	Long: `Export will operate over every stack found in the evaluated cue files.
 	
-The following config.internal.cue options are avilable:
+The following config.stax.cue options are avilable:
 
 Cmd: {
   Export: YmlPath: string | *"./yml"
