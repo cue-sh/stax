@@ -8,9 +8,9 @@ import (
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
 	"cuelang.org/go/cue/format"
-	"github.com/TangoGroup/stx/stx"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/cue-sh/stax/internal"
 	"github.com/spf13/cobra"
 )
 
@@ -27,10 +27,10 @@ saved as its own file with a .out.cue extension.
 The outputs themselves do not need to be defined in Cue. For example if you
 want to reference outputs in stacks that were deployed with some other tool,
 all you need is the stack name, profile, and region to be defined in Cue.
-From there stx will pull outputs from the CloudFormation API.
+From there stax will pull outputs from the CloudFormation API.
 
 By default the output files will be stored in the same directory as the stack was
-defined, but this can be overridden in config.stx.cue via:
+defined, but this can be overridden in config.stax.cue via:
 
 Cmd: Save: OutFilePrefix: ""
 
@@ -48,19 +48,19 @@ or any string that begins with "_".
 	Run: func(cmd *cobra.Command, args []string) {
 
 		defer log.Flush()
-		stx.EnsureVaultSession(config)
+		internal.EnsureVaultSession(config)
 
-		buildInstances := stx.GetBuildInstances(args, config.PackageName)
+		buildInstances := internal.GetBuildInstances(args, config.PackageName)
 
-		stx.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
-			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)
+		internal.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
+			stacksIterator, stacksIteratorErr := internal.NewStacksIterator(cueInstance, flags, log)
 			if stacksIteratorErr != nil {
 				log.Fatal(stacksIteratorErr)
 			}
 
 			for stacksIterator.Next() {
 				stackValue := stacksIterator.Value()
-				var stack stx.Stack
+				var stack internal.Stack
 				decodeErr := stackValue.Decode(&stack)
 				if decodeErr != nil {
 					log.Error(decodeErr)
@@ -76,10 +76,10 @@ or any string that begins with "_".
 	},
 }
 
-func saveStackOutputs(config *stx.Config, buildInstance *build.Instance, stack stx.Stack) error {
+func saveStackOutputs(config *internal.Config, buildInstance *build.Instance, stack internal.Stack) error {
 
 	// get a session and cloudformation service client
-	session := stx.GetSession(stack.Profile)
+	session := internal.GetSession(stack.Profile)
 	cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
 	describeStacksInput := cloudformation.DescribeStacksInput{StackName: aws.String(stack.Name)}
 	describeStacksOutput, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)

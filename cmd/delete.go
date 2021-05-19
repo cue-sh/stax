@@ -8,9 +8,9 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
-	"github.com/TangoGroup/stx/stx"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/cue-sh/stax/internal"
 	"github.com/spf13/cobra"
 )
 
@@ -36,20 +36,20 @@ applied to the credentials being used! **
 
 		//TODO add debug messages
 		defer log.Flush()
-		stx.EnsureVaultSession(config)
+		internal.EnsureVaultSession(config)
 
-		buildInstances := stx.GetBuildInstances(args, config.PackageName)
+		buildInstances := internal.GetBuildInstances(args, config.PackageName)
 
-		stx.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
+		internal.Process(config, buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
 
-			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)
+			stacksIterator, stacksIteratorErr := internal.NewStacksIterator(cueInstance, flags, log)
 			if stacksIteratorErr != nil {
 				log.Fatal(stacksIteratorErr)
 			}
 
 			for stacksIterator.Next() {
 				stackValue := stacksIterator.Value()
-				var stack stx.Stack
+				var stack internal.Stack
 				decodeErr := stackValue.Decode(&stack)
 				if decodeErr != nil {
 					log.Error(decodeErr)
@@ -64,7 +64,7 @@ applied to the credentials being used! **
 					continue
 				}
 
-				session := stx.GetSession(stack.Profile)
+				session := internal.GetSession(stack.Profile)
 				cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
 
 				log.Infof("%s %s %s %s:%s\n", au.White("Deleting"), au.Magenta(stack.Name), au.White("⤎"), au.Green(stack.Profile), au.Cyan(stack.Region))

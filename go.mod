@@ -1,6 +1,6 @@
-module github.com/TangoGroup/stx
+module github.com/cue-sh/stax
 
-go 1.13
+go 1.15
 
 require (
 	cuelang.org/go v0.3.2

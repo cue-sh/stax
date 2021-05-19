@@ -1,4 +1,4 @@
-package stx
+package internal
 
 import (
 	"errors"
@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"cuelang.org/go/cue"
-	"github.com/TangoGroup/stx/logger"
+	"github.com/cue-sh/stax/logger"
 )
 
 // Stack represents the decoded value of stacks[stackname]

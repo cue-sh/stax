@@ -17,7 +17,7 @@ func init() {
 const scaffold = `package cfn
 
 Stacks: {
-	${STX::ImportedStack}
+	${stax::ImportedStack}
 	[StackName= =~"${STX::StackNameRegexPattern}"]: {
 		stack=Stacks[StackName]
 		Profile: "${STX::Profile}"
