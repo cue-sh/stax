@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -8,8 +9,8 @@ import (
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
 	"cuelang.org/go/cue/format"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/cue-sh/stax/internal"
 	"github.com/spf13/cobra"
 )
@@ -48,7 +49,6 @@ or any string that begins with "_".
 	Run: func(cmd *cobra.Command, args []string) {
 
 		defer log.Flush()
-		internal.EnsureVaultSession(config)
 
 		buildInstances := internal.GetBuildInstances(args, config.PackageName)
 
@@ -79,10 +79,10 @@ or any string that begins with "_".
 func saveStackOutputs(config *internal.Config, buildInstance *build.Instance, stack internal.Stack) error {
 
 	// get a session and cloudformation service client
-	session := internal.GetSession(stack.Profile)
-	cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
+	cfn := internal.GetCloudFormationClient(stack.Profile, stack.Region)
+
 	describeStacksInput := cloudformation.DescribeStacksInput{StackName: aws.String(stack.Name)}
-	describeStacksOutput, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)
+	describeStacksOutput, describeStacksErr := cfn.DescribeStacks(context.TODO(), &describeStacksInput)
 	if describeStacksErr != nil {
 		return describeStacksErr
 	}
@@ -99,7 +99,7 @@ func saveStackOutputs(config *internal.Config, buildInstance *build.Instance, st
 	result := "package outputs" + "\n\n\"" + stack.Name + "\": {\n"
 	// convert cloudformation outputs into simple key:value pairs
 	for _, output := range describeStacksOutput.Stacks[0].Outputs {
-		result += fmt.Sprintf("\"%s\":\"%s\"\n", aws.StringValue(output.OutputKey), aws.StringValue(output.OutputValue))
+		result += fmt.Sprintf("\"%s\":\"%s\"\n", aws.ToString(output.OutputKey), aws.ToString(output.OutputValue))
 	}
 	result += "}\n"
 

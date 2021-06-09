@@ -1,13 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"os"
 	"strings"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/cue-sh/stax/internal"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -30,7 +31,6 @@ resources currently managed in the stack.
 
 		// TODO add debug messages
 		defer log.Flush()
-		internal.EnsureVaultSession(config)
 
 		buildInstances := internal.GetBuildInstances(args, config.PackageName)
 
@@ -50,12 +50,12 @@ resources currently managed in the stack.
 				}
 
 				// get a session and cloudformation service client
-				session := internal.GetSession(stack.Profile)
-				cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
+				// get a session and cloudformation service client
+				cfn := internal.GetCloudFormationClient(stack.Profile, stack.Region)
 				log.Infof("%s %s...\n", au.White("Describing"), au.Magenta(stack.Name))
 
 				describeStackResourcesInput := cloudformation.DescribeStackResourcesInput{StackName: aws.String(stack.Name)}
-				describeStackResourcesOutput, describeStackResourcesErr := cfn.DescribeStackResources(&describeStackResourcesInput)
+				describeStackResourcesOutput, describeStackResourcesErr := cfn.DescribeStackResources(context.TODO(), &describeStackResourcesInput)
 				if describeStackResourcesErr != nil {
 					log.Error(describeStackResourcesErr)
 					continue
@@ -70,16 +70,16 @@ resources currently managed in the stack.
 
 				for _, resource := range describeStackResourcesOutput.StackResources {
 
-					status := aws.StringValue(resource.ResourceStatus)
-					if strings.Contains(aws.StringValue(resource.ResourceStatus), "COMPLETE") {
-						status = au.BrightGreen(aws.StringValue(resource.ResourceStatus)).String()
+					status := string(resource.ResourceStatus)
+					if strings.Contains(string(resource.ResourceStatus), "COMPLETE") {
+						status = au.BrightGreen(string(resource.ResourceStatus)).String()
 					}
 
-					if strings.Contains(aws.StringValue(resource.ResourceStatus), "FAIL") || strings.Contains(aws.StringValue(resource.ResourceStatus), "ROLLBACK") {
-						status = au.Red(aws.StringValue(resource.ResourceStatus)).String()
+					if strings.Contains(string(resource.ResourceStatus), "FAIL") || strings.Contains(string(resource.ResourceStatus), "ROLLBACK") {
+						status = au.Red(string(resource.ResourceStatus)).String()
 					}
 
-					table.Append([]string{aws.StringValue(resource.LogicalResourceId), aws.StringValue(resource.PhysicalResourceId), aws.StringValue(resource.ResourceType), status})
+					table.Append([]string{aws.ToString(resource.LogicalResourceId), aws.ToString(resource.PhysicalResourceId), aws.ToString(resource.ResourceType), status})
 				}
 				table.Render()
 			}

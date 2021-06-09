@@ -1,14 +1,15 @@
 package cmd
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"regexp"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/cue-sh/stax/internal"
 	"github.com/gonvenience/ytbx"
 	"github.com/homeport/dyff/pkg/dyff"
@@ -30,7 +31,6 @@ Diff is an implementation of https://github.com/homeport/dyff
 	Run: func(cmd *cobra.Command, args []string) {
 
 		defer log.Flush()
-		internal.EnsureVaultSession(config)
 
 		buildInstances := internal.GetBuildInstances(args, config.PackageName)
 
@@ -55,8 +55,7 @@ Diff is an implementation of https://github.com/homeport/dyff
 				}
 
 				// get a session and cloudformation service client
-				session := internal.GetSession(stack.Profile)
-				cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
+				cfn := internal.GetCloudFormationClient(stack.Profile, stack.Region)
 
 				// read template from disk
 				templateFileBytes, _ := ioutil.ReadFile(fileName)
@@ -64,7 +63,7 @@ Diff is an implementation of https://github.com/homeport/dyff
 
 				// look to see if stack exists
 				describeStacksInput := cloudformation.DescribeStacksInput{StackName: aws.String(stack.Name)}
-				describeStacksOutput, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)
+				describeStacksOutput, describeStacksErr := cfn.DescribeStacks(context.TODO(), &describeStacksInput)
 
 				if describeStacksErr != nil {
 					log.Debugf("DESC STAX:\n%+v\n", describeStacksOutput)
@@ -79,18 +78,18 @@ Diff is an implementation of https://github.com/homeport/dyff
 	},
 }
 
-func diff(cfn *cloudformation.CloudFormation, stackName, templateBody string) {
-	existingTemplate, err := cfn.GetTemplate(&cloudformation.GetTemplateInput{
+func diff(cfn *cloudformation.Client, stackName, templateBody string) {
+	existingTemplate, err := cfn.GetTemplate(context.TODO(), &cloudformation.GetTemplateInput{
 		StackName: &stackName,
 	})
 	if err != nil {
 		log.Error("Error getting template for stack", stackName)
 	} else {
 		r, _ := regexp.Compile("!(Base64|Cidr|FindInMap|GetAtt|GetAZs|ImportValue|Join|Select|Split|Sub|Transform|Ref|And|Equals|If|Not|Or)")
-		if r.MatchString(aws.StringValue(existingTemplate.TemplateBody)) {
+		if r.MatchString(aws.ToString(existingTemplate.TemplateBody)) {
 			log.Warn("The existing stack uses short intrinsic functions, unable to create diff: " + stackName)
 		} else {
-			existingDoc, _ := ytbx.LoadDocuments([]byte(aws.StringValue(existingTemplate.TemplateBody)))
+			existingDoc, _ := ytbx.LoadDocuments([]byte(aws.ToString(existingTemplate.TemplateBody)))
 			doc, _ := ytbx.LoadDocuments([]byte(templateBody))
 			report, err := dyff.CompareInputFiles(
 				ytbx.InputFile{Documents: existingDoc},

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,8 +9,8 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/cue-sh/stax/internal"
 	"github.com/spf13/cobra"
 )
@@ -36,7 +37,6 @@ applied to the credentials being used! **
 
 		//TODO add debug messages
 		defer log.Flush()
-		internal.EnsureVaultSession(config)
 
 		buildInstances := internal.GetBuildInstances(args, config.PackageName)
 
@@ -64,12 +64,12 @@ applied to the credentials being used! **
 					continue
 				}
 
-				session := internal.GetSession(stack.Profile)
-				cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
+				// get a session and cloudformation service client
+				cfn := internal.GetCloudFormationClient(stack.Profile, stack.Region)
 
 				log.Infof("%s %s %s %s:%s\n", au.White("Deleting"), au.Magenta(stack.Name), au.White("⤎"), au.Green(stack.Profile), au.Cyan(stack.Region))
 				deleteStackInput := cloudformation.DeleteStackInput{StackName: aws.String(stack.Name)}
-				_, deleteStackErr := cfn.DeleteStack(&deleteStackInput)
+				_, deleteStackErr := cfn.DeleteStack(context.TODO(), &deleteStackInput)
 				if deleteStackErr != nil {
 					log.Error(deleteStackErr)
 					continue

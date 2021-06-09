@@ -1,13 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"os"
 	"strings"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/cue-sh/stax/internal"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -23,7 +24,6 @@ For each stack, events will query CloudFormation and return a list of events.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO add debug messages
 		defer log.Flush()
-		internal.EnsureVaultSession(config)
 
 		buildInstances := internal.GetBuildInstances(args, config.PackageName)
 
@@ -43,10 +43,10 @@ For each stack, events will query CloudFormation and return a list of events.`,
 				}
 
 				// get a session and cloudformation service client
-				session := internal.GetSession(stack.Profile)
-				cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
+				// get a session and cloudformation service client
+				cfn := internal.GetCloudFormationClient(stack.Profile, stack.Region)
 				describeStackEventsInput := cloudformation.DescribeStackEventsInput{StackName: aws.String(stack.Name)}
-				describeStackEventsOutput, describeStackEventsErr := cfn.DescribeStackEvents(&describeStackEventsInput)
+				describeStackEventsOutput, describeStackEventsErr := cfn.DescribeStackEvents(context.TODO(), &describeStackEventsInput)
 				if describeStackEventsErr != nil {
 					log.Error(describeStackEventsErr)
 					continue
@@ -70,17 +70,17 @@ For each stack, events will query CloudFormation and return a list of events.`,
 					}
 					reason := "-"
 					if event.ResourceStatusReason != nil {
-						reason = aws.StringValue(event.ResourceStatusReason)
+						reason = aws.ToString(event.ResourceStatusReason)
 					}
-					status := aws.StringValue(event.ResourceStatus)
-					if strings.Contains(aws.StringValue(event.ResourceStatus), "COMPLETE") {
-						status = au.BrightGreen(aws.StringValue(event.ResourceStatus)).String()
+					status := string(event.ResourceStatus)
+					if strings.Contains(string(event.ResourceStatus), "COMPLETE") {
+						status = au.BrightGreen(string(event.ResourceStatus)).String()
 					}
-					// if strings.Contains(aws.StringValue(event.ResourceStatus), "PROGRESS") {
-					// 	status = au.Yellow(aws.StringValue(event.ResourceStatus)).String()
+					// if strings.Contains(aws.ToString(event.ResourceStatus), "PROGRESS") {
+					// 	status = au.Yellow(aws.ToString(event.ResourceStatus)).String()
 					// }
-					if strings.Contains(aws.StringValue(event.ResourceStatus), "FAIL") || strings.Contains(aws.StringValue(event.ResourceStatus), "ROLLBACK") {
-						status = au.Red(aws.StringValue(event.ResourceStatus)).String()
+					if strings.Contains(string(event.ResourceStatus), "FAIL") || strings.Contains(string(event.ResourceStatus), "ROLLBACK") {
+						status = au.Red(string(event.ResourceStatus)).String()
 						reason = au.Red(reason).String()
 					}
 					resource := *event.LogicalResourceId
