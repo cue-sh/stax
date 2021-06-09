@@ -346,10 +346,11 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 			break
 		}
 
-		if describeChangesetOuput.Status != types.ChangeSetStatusCreateInProgress {
+		if describeChangesetOuput.Status != types.ChangeSetStatusCreateInProgress && describeChangesetOuput.Status != types.ChangeSetStatusCreatePending {
 			break
 		}
 
+		log.Debugf("Changeset is %s. Polling again in 5s.\n", describeChangesetOuput.Status)
 		time.Sleep(5 * time.Second)
 	}
 
@@ -359,12 +360,14 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 
 	if describeChangesetOuput.ExecutionStatus != types.ExecutionStatusAvailable || describeChangesetOuput.Status != types.ChangeSetStatusCreateComplete {
 		//TODO put describeChangesetOuput into table view
-		log.Infof("%+v\n", describeChangesetOuput)
+		log.Debugf("%+v\n", describeChangesetOuput)
 		log.Info(au.Yellow("No changes to deploy."))
+
 		var deleteChangesetInput cloudformation.DeleteChangeSetInput
 		deleteChangesetInput.ChangeSetName = createChangeSetInput.ChangeSetName
 		deleteChangesetInput.StackName = createChangeSetInput.StackName
 		log.Infof("%s %s\n", au.White("Deleting"), au.BrightBlue(changeSetName))
+
 		_, deleteChangeSetErr := cfn.DeleteChangeSet(context.TODO(), &deleteChangesetInput)
 		if deleteChangeSetErr != nil {
 			log.Error(deleteChangeSetErr)
@@ -453,6 +456,7 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 		var describeStacksErr error
 		var stackStatus types.StackStatus
 
+		// TODO make this a waiter when v2 supports them
 		for i := 0; i < 60; i++ {
 			describeStacksOuput, describeStacksErr = cfn.DescribeStacks(context.TODO(), &describeStacksInput)
 			if describeStacksErr != nil {
@@ -461,17 +465,17 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 			}
 
 			stackStatus = describeStacksOuput.Stacks[0].StackStatus
-
-			if stackStatus != types.StackStatusCreateInProgress || stackStatus != types.StackStatusUpdateInProgress {
+			if stackStatus != types.StackStatusCreateInProgress && stackStatus != types.StackStatusUpdateInProgress {
 				break
 			}
 
+			log.Debugf("Stack is %s. Polling again in 5s.\n", stackStatus)
 			time.Sleep(5 * time.Second)
 		}
 
-		if stackStatus != types.StackStatusCreateComplete || stackStatus != types.StackStatusUpdateComplete {
+		if stackStatus != types.StackStatusCreateComplete && stackStatus != types.StackStatusUpdateComplete {
 			log.Errorf("Stack failed with status %s", stackStatus)
-		} else if false {
+		} else {
 			log.Check()
 
 			if flags.DeploySave {
