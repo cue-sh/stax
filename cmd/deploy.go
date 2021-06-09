@@ -14,11 +14,9 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/service/sns"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
+	"github.com/aws/aws-sdk-go-v2/service/cloudformation/types"
 	"github.com/cue-sh/stax/graph"
 	"github.com/cue-sh/stax/internal"
 	"github.com/olekukonko/tablewriter"
@@ -79,7 +77,6 @@ first.
 	Run: func(cmd *cobra.Command, args []string) {
 
 		defer log.Flush()
-		internal.EnsureVaultSession(config)
 
 		if flags.DeployDeps {
 			flags.DeploySave = true
@@ -146,9 +143,8 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 
 	// get a session and cloudformation service client
 	log.Debugf("\nGetting session for profile %s\n", stack.Profile)
-	session := internal.GetSession(stack.Profile)
-	awsCfg := aws.NewConfig().WithRegion(stack.Region)
-	cfn := cloudformation.New(session, awsCfg)
+	// get a session and cloudformation service client
+	cfn := internal.GetCloudFormationClient(stack.Profile, stack.Region)
 
 	// read template from disk
 	log.Debug("Reading template from", fileName)
@@ -158,10 +154,10 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 
 	changeSetName := "stax-dpl-" + usr.Username + "-" + fmt.Sprintf("%x", sha1.Sum(templateFileBytes))
 	// validate template
-	validateTemplateInput := cloudformation.ValidateTemplateInput{
+	validateTemplateInput := &cloudformation.ValidateTemplateInput{
 		TemplateBody: &templateBody,
 	}
-	validateTemplateOutput, validateTemplateErr := cfn.ValidateTemplate(&validateTemplateInput)
+	validateTemplateOutput, validateTemplateErr := cfn.ValidateTemplate(context.TODO(), validateTemplateInput)
 
 	// template failed to validate
 	if validateTemplateErr != nil {
@@ -176,7 +172,7 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 	// look to see if stack exists
 	log.Debug("Describing", stack.Name)
 	describeStacksInput := cloudformation.DescribeStacksInput{StackName: aws.String(stack.Name)}
-	_, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)
+	_, describeStacksErr := cfn.DescribeStacks(context.TODO(), &describeStacksInput)
 
 	createChangeSetInput := cloudformation.CreateChangeSetInput{
 		Capabilities:  validateTemplateOutput.Capabilities,
@@ -192,7 +188,7 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 		changeSetType = "CREATE" // if stack does not already exist
 	}
 
-	createChangeSetInput.ChangeSetType = &changeSetType
+	createChangeSetInput.ChangeSetType = types.ChangeSetType(changeSetType)
 
 	stackParametersValue := stackValue.Lookup("Template", "Parameters")
 	if stackParametersValue.Exists() {
@@ -200,7 +196,7 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 		// TODO paramaters need to support the type as declared in Parameter.Type (in the least string and number).
 		// this should be map[string]interface{} with type casting done when adding parameters to the changeset
 		parametersMap := make(map[string]string)
-		var parameters []*cloudformation.Parameter
+		var parameters []types.Parameter
 
 		if flags.DeployPrevious {
 			// deploy using previous values
@@ -281,24 +277,24 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 		for k, v := range parametersMap {
 			paramKey := k
 			paramVal := v
-			parameter := cloudformation.Parameter{ParameterKey: aws.String(paramKey)}
+			parameter := types.Parameter{ParameterKey: aws.String(paramKey)}
 
 			if flags.DeployPrevious {
-				parameter.SetUsePreviousValue(true)
+				parameter.UsePreviousValue = aws.Bool(true)
 			} else {
 				parameter.ParameterValue = aws.String(paramVal)
 			}
 
-			parameters = append(parameters, &parameter)
+			parameters = append(parameters, parameter)
 		}
 
-		createChangeSetInput.SetParameters(parameters)
+		createChangeSetInput.Parameters = parameters
 
 	} // end stackParametersValue.Exists()
 
 	// handle Stack.Tags
 	if len(stack.Tags) > 0 && stack.TagsEnabled {
-		var tags []*cloudformation.Tag
+		var tags []types.Tag
 		for k, v := range stack.Tags {
 			tagK := k // reassign here to avoid issues with for-scope var
 			var tagV string
@@ -310,47 +306,28 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 			case "${STX::CueFiles}":
 				tagV = strings.Join(buildInstance.CUEFiles, ", ")
 			}
-			tags = append(tags, &cloudformation.Tag{Key: &tagK, Value: &tagV})
+			tags = append(tags, types.Tag{Key: &tagK, Value: &tagV})
 		}
-		createChangeSetInput.SetTags(tags)
-	}
-	if config.Cmd.Deploy.Notify.TopicArn != "" { // && stax notify command is running! perhaps use unix domain sockets to test
-		log.Infof("%s", au.Gray(11, "  Reticulating splines..."))
-
-		snsClient := sns.New(session, awsCfg)
-
-		subscribeInput := sns.SubscribeInput{Endpoint: aws.String(config.Cmd.Deploy.Notify.Endpoint), TopicArn: aws.String(config.Cmd.Deploy.Notify.TopicArn), Protocol: aws.String("http")}
-		_, subscribeErr := snsClient.Subscribe(&subscribeInput)
-		if subscribeErr != nil {
-			log.Errorf("%s\n", subscribeErr)
-		} else {
-			var notificationArns []*string
-			notificationArns = append(notificationArns, aws.String(config.Cmd.Deploy.Notify.TopicArn))
-			createChangeSetInput.SetNotificationARNs(notificationArns)
-			log.Check()
-		}
+		createChangeSetInput.Tags = tags
 	}
 
 	log.Infof("%s", au.Gray(11, "  Creating changeset..."))
 
-	_, createChangeSetErr := cfn.CreateChangeSet(&createChangeSetInput)
+	_, createChangeSetErr := cfn.CreateChangeSet(context.TODO(), &createChangeSetInput)
 
 	if createChangeSetErr != nil {
-		if awsErr, ok := createChangeSetErr.(awserr.Error); ok {
-			log.Infof(" %s\n", au.Red(awsErr))
-			if awsErr.Code() == "AlreadyExistsException" {
-				var deleteChangesetInput cloudformation.DeleteChangeSetInput
-				deleteChangesetInput.ChangeSetName = createChangeSetInput.ChangeSetName
-				deleteChangesetInput.StackName = createChangeSetInput.StackName
-				log.Infof("%s %s\n", au.White("Deleting"), au.BrightBlue(changeSetName))
-				_, deleteChangeSetErr := cfn.DeleteChangeSet(&deleteChangesetInput)
-				if deleteChangeSetErr != nil {
-					log.Error(deleteChangeSetErr)
-				}
-				return
+		log.Infof(" %s\n", au.Red(createChangeSetErr))
+		if createChangeSetErr.Error() == "AlreadyExistsException" {
+			var deleteChangesetInput cloudformation.DeleteChangeSetInput
+			deleteChangesetInput.ChangeSetName = createChangeSetInput.ChangeSetName
+			deleteChangesetInput.StackName = createChangeSetInput.StackName
+			log.Infof("%s %s\n", au.White("Deleting"), au.BrightBlue(changeSetName))
+			_, deleteChangeSetErr := cfn.DeleteChangeSet(context.TODO(), &deleteChangesetInput)
+			if deleteChangeSetErr != nil {
+				log.Error(deleteChangeSetErr)
 			}
+			return
 		}
-		log.Fatal(createChangeSetErr)
 	}
 
 	describeChangesetInput := cloudformation.DescribeChangeSetInput{
@@ -358,18 +335,29 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 		StackName:     aws.String(stack.Name),
 	}
 
-	waitOption := request.WithWaiterDelay(request.ConstantWaiterDelay(5 * time.Second))
-	cfn.WaitUntilChangeSetCreateCompleteWithContext(context.Background(), &describeChangesetInput, waitOption)
+	var describeChangesetOuput *cloudformation.DescribeChangeSetOutput
+	var describeChangesetErr error
+
+	// TODO: make this a waiter when v2 finally supports them
+	for i := 0; i < 60; i++ {
+		describeChangesetOuput, describeChangesetErr = cfn.DescribeChangeSet(context.TODO(), &describeChangesetInput)
+		if describeChangesetErr != nil {
+			log.Fatalf("%+v", au.Red(describeChangesetErr))
+			break
+		}
+
+		if describeChangesetOuput.Status != types.ChangeSetStatusCreateInProgress {
+			break
+		}
+
+		time.Sleep(5 * time.Second)
+	}
 
 	log.Check()
 
 	log.Infof("%s %s %s %s:%s\n", au.White("Describing"), au.BrightBlue(changeSetName), au.White("⤎"), au.Magenta(stack.Name), au.Cyan(stack.Region))
-	describeChangesetOuput, describeChangesetErr := cfn.DescribeChangeSet(&describeChangesetInput)
-	if describeChangesetErr != nil {
-		log.Fatalf("%+v", au.Red(describeChangesetErr))
-	}
 
-	if aws.StringValue(describeChangesetOuput.ExecutionStatus) != "AVAILABLE" || aws.StringValue(describeChangesetOuput.Status) != "CREATE_COMPLETE" {
+	if describeChangesetOuput.ExecutionStatus != types.ExecutionStatusAvailable || describeChangesetOuput.Status != types.ChangeSetStatusCreateComplete {
 		//TODO put describeChangesetOuput into table view
 		log.Infof("%+v\n", describeChangesetOuput)
 		log.Info(au.Yellow("No changes to deploy."))
@@ -377,7 +365,7 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 		deleteChangesetInput.ChangeSetName = createChangeSetInput.ChangeSetName
 		deleteChangesetInput.StackName = createChangeSetInput.StackName
 		log.Infof("%s %s\n", au.White("Deleting"), au.BrightBlue(changeSetName))
-		_, deleteChangeSetErr := cfn.DeleteChangeSet(&deleteChangesetInput)
+		_, deleteChangeSetErr := cfn.DeleteChangeSet(context.TODO(), &deleteChangesetInput)
 		if deleteChangeSetErr != nil {
 			log.Error(deleteChangeSetErr)
 		}
@@ -396,23 +384,23 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 		for _, change := range describeChangesetOuput.Changes {
 
 			row := []string{
-				aws.StringValue(change.ResourceChange.LogicalResourceId),
-				aws.StringValue(change.ResourceChange.Action),
+				aws.ToString(change.ResourceChange.LogicalResourceId),
+				string(change.ResourceChange.Action),
 				"",
 				"",
 				"",
 			}
 
-			if aws.StringValue(change.ResourceChange.Action) == "Modify" {
+			if change.ResourceChange.Action == types.ChangeActionModify {
 				for _, detail := range change.ResourceChange.Details {
-					row[2] = aws.StringValue(detail.Target.Attribute)
-					row[3] = aws.StringValue(detail.Target.Name)
-					recreation := aws.StringValue(detail.Target.RequiresRecreation)
+					row[2] = string(detail.Target.Attribute)
+					row[3] = aws.ToString(detail.Target.Name)
+					recreation := detail.Target.RequiresRecreation
 
-					if recreation == "ALWAYS" || recreation == "CONDITIONAL" {
+					if recreation == types.RequiresRecreationAlways || recreation == types.RequiresRecreationConditionally {
 						row[4] = au.Red(recreation).String()
 					} else {
-						row[4] = recreation
+						row[4] = string(recreation)
 					}
 					table.Append(row)
 				}
@@ -438,7 +426,7 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 		deleteChangesetInput.ChangeSetName = createChangeSetInput.ChangeSetName
 		deleteChangesetInput.StackName = createChangeSetInput.StackName
 		log.Infof("%s %s\n", au.White("Deleting"), au.BrightBlue(changeSetName))
-		_, deleteChangeSetErr := cfn.DeleteChangeSet(&deleteChangesetInput)
+		_, deleteChangeSetErr := cfn.DeleteChangeSet(context.TODO(), &deleteChangesetInput)
 		if deleteChangeSetErr != nil {
 			log.Error(deleteChangeSetErr)
 		}
@@ -452,7 +440,7 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 
 	log.Infof("%s %s %s %s:%s\n", au.White("Executing"), au.BrightBlue(changeSetName), au.White("⤏"), au.Magenta(stack.Name), au.Cyan(stack.Region))
 
-	_, executeChangeSetErr := cfn.ExecuteChangeSet(&executeChangeSetInput)
+	_, executeChangeSetErr := cfn.ExecuteChangeSet(context.TODO(), &executeChangeSetInput)
 
 	if executeChangeSetErr != nil {
 		log.Fatal(executeChangeSetErr)
@@ -460,18 +448,37 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 
 	if flags.DeploySave || flags.DeployWait {
 		log.Infof("%s", au.Gray(11, "  Waiting for stack..."))
-		switch changeSetType {
-		case "UPDATE":
-			cfn.WaitUntilStackUpdateCompleteWithContext(context.Background(), &describeStacksInput, waitOption)
-		case "CREATE":
-			cfn.WaitUntilStackCreateCompleteWithContext(context.Background(), &describeStacksInput, waitOption)
-		}
-		log.Check()
 
-		if flags.DeploySave {
-			saveErr := saveStackOutputs(config, buildInstance, stack)
-			if saveErr != nil {
-				log.Fatal(saveErr)
+		var describeStacksOuput *cloudformation.DescribeStacksOutput
+		var describeStacksErr error
+		var stackStatus types.StackStatus
+
+		for i := 0; i < 60; i++ {
+			describeStacksOuput, describeStacksErr = cfn.DescribeStacks(context.TODO(), &describeStacksInput)
+			if describeStacksErr != nil {
+				log.Fatalf("%+v", au.Red(describeStacksErr))
+				break
+			}
+
+			stackStatus = describeStacksOuput.Stacks[0].StackStatus
+
+			if stackStatus != types.StackStatusCreateInProgress || stackStatus != types.StackStatusUpdateInProgress {
+				break
+			}
+
+			time.Sleep(5 * time.Second)
+		}
+
+		if stackStatus != types.StackStatusCreateComplete || stackStatus != types.StackStatusUpdateComplete {
+			log.Errorf("Stack failed with status %s", stackStatus)
+		} else if false {
+			log.Check()
+
+			if flags.DeploySave {
+				saveErr := saveStackOutputs(config, buildInstance, stack)
+				if saveErr != nil {
+					log.Fatal(saveErr)
+				}
 			}
 		}
 	}
