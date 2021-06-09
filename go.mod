@@ -4,7 +4,10 @@ go 1.15
 
 require (
 	cuelang.org/go v0.3.2
-	github.com/aws/aws-sdk-go v1.29.2
+	github.com/aws/aws-sdk-go-v2 v1.6.0
+	github.com/aws/aws-sdk-go-v2/config v1.3.0
+	github.com/aws/aws-sdk-go-v2/service/cloudformation v1.5.1
+	github.com/aws/aws-sdk-go-v2/service/sns v1.5.0
 	github.com/briandowns/spinner v1.8.0
 	github.com/deckarep/golang-set v1.7.1
 	github.com/ghodss/yaml v1.0.0
@@ -18,5 +21,5 @@ require (
 	github.com/rdegges/go-ipify v0.0.0-20150526035502-2d94a6a86c40
 	github.com/spf13/cobra v1.0.0
 	go.mozilla.org/sops/v3 v3.5.0
-	gopkg.in/yaml.v2 v2.2.7
+	gopkg.in/yaml.v2 v2.2.8
 )
