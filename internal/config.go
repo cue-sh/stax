@@ -21,10 +21,6 @@ type Flags struct {
 }
 
 const configCue = `package stax
-Auth: {
-	AwsVault: SourceProfile: string | *""
-	Ykman: Profile: string | *""
-}
 Cmd: {
 	Export: YmlPath: string | *"./yml"
 	Deploy: {
