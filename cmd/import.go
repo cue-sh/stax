@@ -1,10 +1,13 @@
 package cmd
 
 import (
+	"context"
+
 	"cuelang.org/go/cue/format"
 	"cuelang.org/go/encoding/json"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
+	"github.com/aws/aws-sdk-go-v2/service/cloudformation/types"
 	"github.com/cue-sh/stax/internal"
 	"github.com/ghodss/yaml"
 	"github.com/spf13/cobra"
@@ -37,21 +40,19 @@ Stacks pattern, and save it as a formatted Cue file.
 
 		flags.StackNameRegexPattern = "^" + flags.ImportStack + "$"
 
-		internal.EnsureVaultSession(config)
-
 		// get a session and cloudformation service client
-		session := internal.GetSession(flags.Profile)
-		cfn := cloudformation.New(session, aws.NewConfig().WithRegion(flags.ImportRegion))
+		cfn := internal.GetCloudFormationClient(flags.Profile, flags.ImportRegion)
+
 		log.Infof("%s %s...", au.White("Importing"), au.Magenta(flags.ImportStack))
 
-		getTemplateOutput, getTemplateErr := cfn.GetTemplate(&cloudformation.GetTemplateInput{StackName: aws.String(flags.ImportStack), TemplateStage: aws.String("Processed")})
+		getTemplateOutput, getTemplateErr := cfn.GetTemplate(context.TODO(), &cloudformation.GetTemplateInput{StackName: aws.String(flags.ImportStack), TemplateStage: types.TemplateStageProcessed})
 
 		if getTemplateErr != nil {
 			log.Error(getTemplateErr)
 			return
 		}
 
-		templateBytes := []byte(aws.StringValue(getTemplateOutput.TemplateBody))
+		templateBytes := []byte(aws.ToString(getTemplateOutput.TemplateBody))
 
 		if !json.Valid(templateBytes) {
 			// it must be yaml so convert to json

@@ -1,13 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"os"
 	"strings"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/cue-sh/stax/internal"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -25,7 +26,6 @@ If the stack does not exist status will return an error.
 		//TODO add debug messages
 		log.Debug("status command executing...")
 		defer log.Flush()
-		internal.EnsureVaultSession(config)
 
 		buildInstances := internal.GetBuildInstances(args, config.PackageName)
 
@@ -45,13 +45,13 @@ If the stack does not exist status will return an error.
 					continue
 				}
 
-				session := internal.GetSession(stack.Profile)
-				cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
+				// get a session and cloudformation service client
+				cfn := internal.GetCloudFormationClient(stack.Profile, stack.Region)
 
 				// use a struct to pass a string, it's GC'd!
 				log.Debug("Describing", stack.Name)
 				describeStacksInput := cloudformation.DescribeStacksInput{StackName: aws.String(stack.Name)}
-				describeStacksOutput, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)
+				describeStacksOutput, describeStacksErr := cfn.DescribeStacks(context.TODO(), &describeStacksInput)
 				log.Debugf("describeStacksOutput:\n%+v\n", describeStacksOutput)
 				if describeStacksErr != nil {
 					log.Error(describeStacksErr)
@@ -59,7 +59,7 @@ If the stack does not exist status will return an error.
 				}
 
 				describedStack := describeStacksOutput.Stacks[0]
-				status := aws.StringValue(describedStack.StackStatus)
+				status := string(describedStack.StackStatus)
 
 				table := tablewriter.NewWriter(os.Stdout)
 				table.SetAutoWrapText(false)
@@ -77,7 +77,7 @@ If the stack does not exist status will return an error.
 					lastUpdatedTime = describedStack.LastUpdatedTime.Local().String()
 				}
 
-				table.Append([]string{au.Magenta(stack.Name).String(), status, describedStack.CreationTime.Local().String(), lastUpdatedTime, aws.StringValue(describedStack.StackStatusReason)})
+				table.Append([]string{au.Magenta(stack.Name).String(), status, describedStack.CreationTime.Local().String(), lastUpdatedTime, aws.ToString(describedStack.StackStatusReason)})
 				table.Render()
 			}
 		})
