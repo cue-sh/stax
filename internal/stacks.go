@@ -17,6 +17,7 @@ type Stack struct {
 		Map         map[string]string
 	}
 	DependsOn   []string
+	Role        string
 	Tags        map[string]string
 	TagsEnabled bool
 }

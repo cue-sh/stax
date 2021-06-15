@@ -311,6 +311,11 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 		createChangeSetInput.Tags = tags
 	}
 
+	if stack.Role != "" {
+		log.Infof("%s", au.Gray(11, "  Applying role: "+stack.Role+"\n"))
+		createChangeSetInput.RoleARN = aws.String(stack.Role)
+	}
+
 	log.Infof("%s", au.Gray(11, "  Creating changeset..."))
 
 	_, createChangeSetErr := cfn.CreateChangeSet(context.TODO(), &createChangeSetInput)
