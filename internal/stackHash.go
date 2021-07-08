@@ -10,6 +10,10 @@ import (
 )
 
 // GetStackHash returns a hash of the stack used by change set names and state
+// the hash is 2 hashes in 1: <stack>-<template>
+// the stack portion is based on non-Template values that will necesitate a deployment
+// the template portion is based solely on the template value
+// separating the 2 allows you to gleen (via diffs) which portion contributed to deployment
 func GetStackHash(stack Stack, stackValue cue.Value) (string, error) {
 
 	// build a string out of values known to change between deployments
@@ -30,6 +34,7 @@ func GetStackHash(stack Stack, stackValue cue.Value) (string, error) {
 	}
 
 	if len(stack.Tags) > 0 {
+		// sort the tags
 		tagsKeys := getSortedMapKeys(stack.Tags)
 		for _, tagKey := range tagsKeys {
 			stackString = stackString + tagKey + stack.Tags[tagKey]
