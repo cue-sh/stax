@@ -92,12 +92,12 @@ func (l *Logger) Fatalf(format string, args ...interface{}) {
 
 // Check prints a green check mark at the end of the current line
 func (l *Logger) Check() {
-	l.Infof("%s\n", l.au.Green("✓"))
+	l.Infof(" %s\n", l.au.Green("✓"))
 }
 
 // X prints a red x mark at the end of the current line
 func (l *Logger) X() {
-	l.Infof("%s\n", l.au.Red("🅇"))
+	l.Infof(" %s\n", l.au.Red("🅇"))
 }
 
 // Flush will call os.Exit if logger accumulated errors
