@@ -30,6 +30,9 @@ func init() {
 	deployCmd.Flags().BoolVarP(&flags.DeploySave, "save", "s", false, "Save stack outputs upon successful completion. Implies --wait.")
 	deployCmd.Flags().BoolVarP(&flags.DeployDeps, "dependencies", "d", false, "Deploy stack dependencies in order. Implies --save.")
 	deployCmd.Flags().BoolVarP(&flags.DeployPrevious, "previous-values", "v", false, "Deploy stack using previous parameter values.")
+	deployCmd.Flags().BoolVar(&flags.DeployNoExecute, "no-execute", false, "Creates the change set only.")
+	// deployCmd.Flags().BoolVar(&flags.DeployYesExecute, "yes-execute", false, "Creates the change set and immediately executes without prompting.")
+	deployCmd.Flags().BoolVar(&flags.DeployExecuteOnly, "execute-only", false, "Executes previously created changesets.")
 }
 
 type deployArgs struct {
@@ -77,6 +80,11 @@ first.
 	Run: func(cmd *cobra.Command, args []string) {
 
 		defer log.Flush()
+
+		if flags.DeployExecuteOnly && flags.DeployNoExecute {
+			log.Fatal("Cannot set both --no-execute and --execute-only")
+			return
+		}
 
 		if flags.DeployDeps {
 			flags.DeploySave = true

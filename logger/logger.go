@@ -95,6 +95,11 @@ func (l *Logger) Check() {
 	l.Infof("%s\n", l.au.Green("✓"))
 }
 
+// X prints a red x mark at the end of the current line
+func (l *Logger) X() {
+	l.Infof("%s\n", l.au.Red("🅇"))
+}
+
 // Flush will call os.Exit if logger accumulated errors
 func (l *Logger) Flush() {
 	if l.errors > 0 {
