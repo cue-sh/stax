@@ -337,8 +337,8 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 		var describeChangesetErr error
 
 		// TODO: make this a waiter when v2 finally supports them
-		// waits for 1 hour polling every 5s
-		for i := 0; i < 720; i++ {
+		// waits for 10m polling every 5s
+		for i := 0; i < 120; i++ {
 			describeChangesetOuput, describeChangesetErr = cfn.DescribeChangeSet(context.TODO(), &describeChangesetInput)
 			if describeChangesetErr != nil {
 				log.X()
@@ -462,7 +462,8 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 		var stackStatus types.StackStatus
 
 		// TODO make this a waiter when v2 supports them
-		for i := 0; i < 60; i++ {
+		// wait for 1h polling every 5s
+		for i := 0; i < 720; i++ {
 			describeStacksOuput, describeStacksErr = cfn.DescribeStacks(context.TODO(), &describeStacksInput)
 			if describeStacksErr != nil {
 				log.Fatalf("%+v", au.Red(describeStacksErr))
@@ -470,7 +471,10 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 			}
 
 			stackStatus = describeStacksOuput.Stacks[0].StackStatus
-			if stackStatus != types.StackStatusCreateInProgress && stackStatus != types.StackStatusUpdateInProgress {
+			if stackStatus != types.StackStatusCreateInProgress &&
+				stackStatus != types.StackStatusUpdateInProgress &&
+				stackStatus != types.StackStatusUpdateCompleteCleanupInProgress &&
+				stackStatus != types.StackStatusImportInProgress {
 				break
 			}
 
