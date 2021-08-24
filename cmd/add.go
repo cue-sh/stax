@@ -34,12 +34,12 @@ var addCmd = &cobra.Command{
 Path to template will default to ./template.cfn.cue
 	
 The following global flags will be used as so:
---stacks will be used as a regular expression in the template: Stacks: [=~"<stacks>"]
 --profile will be used as Stacks: Profile: <profile>
 --environment will be used as Stacks: Environment: <environment>
 --region-code will be used as Stacks: RegionCode: <regionCode>
 
-The following global flags are ignored: 
+The following global flags are ignored:
+-- stacks
 --include
 --exclude`,
 	Args: cobra.MaximumNArgs(1),
