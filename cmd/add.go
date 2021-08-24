@@ -17,9 +17,7 @@ func init() {
 const scaffold = `package cfn
 
 Stacks: {
-	${stax::ImportedStack}
-	[StackName= =~"${STX::StackNameRegexPattern}"]: {
-		stack=Stacks[StackName]
+	${STX::ImportedStack}: {
 		Profile: "${STX::Profile}"
 		Environment: "${STX::Environment}"
 		RegionCode: "${STX::RegionCode}"
@@ -61,12 +59,10 @@ The following global flags are ignored:
 func createTemplate(args []string, template string) error {
 	var pathToTemplate string
 
-	output := strings.Replace(scaffold, "${STX::StackNameRegexPattern}", flags.StackNameRegexPattern, 1)
-	output = strings.Replace(output, "${STX::Profile}", flags.Profile, 1)
+	output := strings.Replace(scaffold, "${STX::Profile}", flags.Profile, 1)
 	output = strings.Replace(output, "${STX::Environment}", flags.Environment, 1)
 	output = strings.Replace(output, "${STX::RegionCode}", flags.RegionCode, 1)
-	output = strings.Replace(output, "${STX::ImportedStack}", "\""+flags.ImportStack+"\": {}", 1)
-
+	output = strings.Replace(output, "${STX::ImportedStack}", "\""+flags.ImportStack+"\"", 1)
 	output = strings.Replace(output, "${STX::Template}", template, 1)
 
 	if len(args) < 1 {
