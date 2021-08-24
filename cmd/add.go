@@ -17,9 +17,7 @@ func init() {
 const scaffold = `package cfn
 
 Stacks: {
-	${stax::ImportedStack}
-	[StackName= =~"${STX::StackNameRegexPattern}"]: {
-		stack=Stacks[StackName]
+	${STX::ImportedStack}: {
 		Profile: "${STX::Profile}"
 		Environment: "${STX::Environment}"
 		RegionCode: "${STX::RegionCode}"
@@ -36,12 +34,12 @@ var addCmd = &cobra.Command{
 Path to template will default to ./template.cfn.cue
 	
 The following global flags will be used as so:
---stacks will be used as a regular expression in the template: Stacks: [=~"<stacks>"]
 --profile will be used as Stacks: Profile: <profile>
 --environment will be used as Stacks: Environment: <environment>
 --region-code will be used as Stacks: RegionCode: <regionCode>
 
-The following global flags are ignored: 
+The following global flags are ignored:
+-- stacks
 --include
 --exclude`,
 	Args: cobra.MaximumNArgs(1),
@@ -61,12 +59,10 @@ The following global flags are ignored:
 func createTemplate(args []string, template string) error {
 	var pathToTemplate string
 
-	output := strings.Replace(scaffold, "${STX::StackNameRegexPattern}", flags.StackNameRegexPattern, 1)
-	output = strings.Replace(output, "${STX::Profile}", flags.Profile, 1)
+	output := strings.Replace(scaffold, "${STX::Profile}", flags.Profile, 1)
 	output = strings.Replace(output, "${STX::Environment}", flags.Environment, 1)
 	output = strings.Replace(output, "${STX::RegionCode}", flags.RegionCode, 1)
-	output = strings.Replace(output, "${STX::ImportedStack}", "\""+flags.ImportStack+"\": {}", 1)
-
+	output = strings.Replace(output, "${STX::ImportedStack}", "\""+flags.ImportStack+"\"", 1)
 	output = strings.Replace(output, "${STX::Template}", template, 1)
 
 	if len(args) < 1 {

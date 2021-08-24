@@ -9,17 +9,19 @@ import (
 	"github.com/cue-sh/stax/logger"
 )
 
+type Override struct {
+	SopsProfile string
+	Map         map[string]string
+}
+
 // Stack represents the decoded value of stacks[stackname]
 type Stack struct {
 	Name, Profile, Region, Environment, RegionCode string
-	Overrides                                      map[string]struct {
-		SopsProfile string
-		Map         map[string]string
-	}
-	DependsOn   []string
-	Role        string
-	Tags        map[string]string
-	TagsEnabled bool
+	Overrides                                      map[string]Override
+	DependsOn                                      []string
+	Role                                           string
+	Tags                                           map[string]string
+	TagsEnabled                                    bool
 }
 
 // StacksIterator is a wrapper around cue.Iterator that allows for filtering based on stack fields

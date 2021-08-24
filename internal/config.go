@@ -17,23 +17,17 @@ type Flags struct {
 	Environment, Profile, RegionCode, Exclude, Include, StackNameRegexPattern, Has, PrintPath, ImportStack, ImportRegion string
 	Debug, NoColor                                                                                                       bool
 	PrintOnlyErrors, PrintHideErrors, PrintOnlyNames, PrintHidePath, PrintOnlyPaths                                      bool
-	DeployWait, DeploySave, DeployDeps, DeployPrevious                                                                   bool
+	DeployWait, DeploySave, DeployDeps, DeployPrevious, DeployNoExecute, DeployExecuteOnly                               bool
 }
 
 const configCue = `package stax
+PackageName: string | *"cfn"
 Cmd: {
 	Export: YmlPath: string | *"./yml"
-	Deploy: {
-		Notify: {
-			Endpoint: string | *""
-			TopicArn: string | *""
-		}
-	}
 	Save: {
 		OutFilePrefix: string | *""
 	}
 }
-PackageName: string | *"cfn"
 `
 
 // Config holds config values parsed from config.stax.cue files
@@ -41,22 +35,9 @@ type Config struct {
 	CueRoot     string
 	OsSeparator string
 	PackageName string
-	Auth        struct {
-		AwsVault struct {
-			SourceProfile string
-		}
-		Ykman struct {
-			Profile string
-		}
-	}
-	Cmd struct {
+	Cmd         struct {
 		Export struct {
 			YmlPath string
-		}
-		Deploy struct {
-			Notify struct {
-				Endpoint, TopicArn string
-			}
 		}
 		Save struct {
 			OutFilePrefix string
