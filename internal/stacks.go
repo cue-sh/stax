@@ -34,7 +34,7 @@ type StacksIterator struct {
 // NewStacksIterator returns *StacksIterator
 func NewStacksIterator(cueInstance *cue.Instance, flags Flags, log *logger.Logger) (*StacksIterator, error) {
 	log.Debug("Getting stacks...")
-	stacks := cueInstance.Value().Lookup("Stacks")
+	stacks := cueInstance.Value().LookupPath(cue.ParsePath("Stacks"))
 	if !stacks.Exists() {
 		return nil, errors.New("Stacks is undefined")
 	}

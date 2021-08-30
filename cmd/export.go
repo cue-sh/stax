@@ -69,7 +69,7 @@ func saveStackAsYml(stack internal.Stack, buildInstance *build.Instance, stackVa
 
 	fileName := dir + "/" + stack.Name + ".cfn.yml"
 	log.Infof("%s %s %s %s\n", au.White("Exported"), au.Magenta(stack.Name), au.White("⤏"), fileName)
-	template := stackValue.Lookup("Template")
+	template := stackValue.LookupPath(cue.ParsePath("Template"))
 	yml, ymlErr := yaml.Marshal(template)
 	if ymlErr != nil {
 		return "", ymlErr
