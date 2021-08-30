@@ -6,16 +6,12 @@ import (
 
 #Environments: [
 	"sand",
-	"development",
 	"dev",
 	"test",
 	"stage",
-	"staging",
-	"production",
 	"prod",
 	"all",
 	"global",
-	"citadel"
 ]
 
 #EnvironmentPattern: strings.Join(#Environments, "|")
