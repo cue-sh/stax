@@ -41,7 +41,7 @@ func GetStackHash(stack Stack, stackValue cue.Value) (string, error) {
 		}
 	}
 
-	template := stackValue.Lookup("Template")
+	template := stackValue.LookupPath(cue.ParsePath("Template"))
 	yml, ymlErr := yaml.Marshal(template)
 	if ymlErr != nil {
 		return "", ymlErr
@@ -54,7 +54,7 @@ func getSortedOverrideKeys(m map[string]Override) []string {
 
 	mk := make([]string, len(m))
 	i := 0
-	for k, _ := range m {
+	for k := range m {
 		mk[i] = k
 		i++
 	}
@@ -66,7 +66,7 @@ func getSortedMapKeys(m map[string]string) []string {
 
 	mk := make([]string, len(m))
 	i := 0
-	for k, _ := range m {
+	for k := range m {
 		mk[i] = k
 		i++
 	}

@@ -3,7 +3,6 @@ package internal
 import (
 	"errors"
 	"regexp"
-	"strings"
 
 	"cuelang.org/go/cue"
 	"github.com/cue-sh/stax/logger"
@@ -36,7 +35,7 @@ func NewStacksIterator(cueInstance *cue.Instance, flags Flags, log *logger.Logge
 	log.Debug("Getting stacks...")
 	stacks := cueInstance.Value().LookupPath(cue.ParsePath("Stacks"))
 	if !stacks.Exists() {
-		return nil, errors.New("Stacks is undefined")
+		return nil, errors.New("required field 'Stacks' is undefined")
 	}
 
 	fields, fieldsErr := stacks.Fields()
@@ -71,7 +70,7 @@ func (it *StacksIterator) Next() bool {
 
 	// apply filters to the current value
 	if it.flags.Environment != "" {
-		environmentValue := currentValue.Lookup("Environment")
+		environmentValue := currentValue.LookupPath(cue.ParsePath("Environment"))
 		if !environmentValue.Exists() {
 			return it.Next()
 		}
@@ -86,7 +85,7 @@ func (it *StacksIterator) Next() bool {
 	}
 
 	if it.flags.RegionCode != "" {
-		regionCodeValue := currentValue.Lookup("RegionCode")
+		regionCodeValue := currentValue.LookupPath(cue.ParsePath("RegionCode"))
 		if !regionCodeValue.Exists() {
 			return it.Next()
 		}
@@ -102,7 +101,7 @@ func (it *StacksIterator) Next() bool {
 
 	if it.flags.Profile != "" {
 		it.log.Debug("Evaluating --profile", it.flags.Profile)
-		profileValue := currentValue.Lookup("Profile")
+		profileValue := currentValue.LookupPath(cue.ParsePath("Profile"))
 		if !profileValue.Exists() {
 			return it.Next()
 		}
@@ -118,8 +117,7 @@ func (it *StacksIterator) Next() bool {
 
 	if it.flags.Has != "" {
 		it.log.Debug("Evaluating --has", it.flags.Has)
-		path := strings.Split(it.flags.Has, ".")
-		hasValue := currentValue.Lookup(path...)
+		hasValue := currentValue.LookupPath(cue.ParsePath(it.flags.Has))
 		if !hasValue.Exists() {
 			return it.Next()
 		}
