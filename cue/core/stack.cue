@@ -4,7 +4,7 @@ import (
 	aws "github.com/cue-sh/cfn-cue/aws/useast1"
 )
 
-Stack: {
+#Stack: {
 	DependsOn?: [...string]
 	Environment: #EnvironmentSchema
 	Name:     string
@@ -21,9 +21,6 @@ Stack: {
 	Role?: =~"^arn:aws:iam::\\d{12}:role/[a-zA-Z0-9\\-_+=,.@]{1,64}$"
 	Template: aws.#Template
 	Template: AWSTemplateFormatVersion: _
-	Tags: {
-		Environment: string 
-		CuePath:     "${STX::CuePath}"
-	}
+	Tags?: [string]: string
 	TagsEnabled: *true | false
 }

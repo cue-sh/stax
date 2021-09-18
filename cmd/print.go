@@ -58,14 +58,13 @@ Each stack will be converted to YAML then printed to stdout.`,
 				}
 
 				valueToMarshal := stackValue
-				path := []string{}
+
 				displayPath := ""
 
 				if flags.PrintPath != "" {
 					log.Debug("Evaluating --path...")
-					path = append(path, strings.Split(flags.PrintPath, ".")...)
-					valueToMarshal = stackValue.Lookup(path...)
-					displayPath = strings.Join(path, ".") + ":"
+					valueToMarshal = stackValue.LookupPath(cue.ParsePath(flags.PrintPath))
+					displayPath = flags.PrintPath + ":"
 					if !valueToMarshal.Exists() {
 						log.Debug(displayPath, "not found")
 						continue
@@ -75,7 +74,7 @@ Each stack will be converted to YAML then printed to stdout.`,
 
 				yml, ymlErr := yaml.Marshal(valueToMarshal)
 				if displayPath != "" {
-					log.Infof("%s%s\n", au.Magenta(stack.Name), au.Brown("."+displayPath))
+					log.Infof("%s%s\n", au.Magenta(stack.Name), au.Yellow("."+displayPath))
 				} else {
 					log.Infof("%s\n", au.Magenta(stack.Name))
 				}

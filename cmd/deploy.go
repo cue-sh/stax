@@ -296,8 +296,6 @@ func deployStack(stack internal.Stack, buildInstance *build.Instance, stackValue
 					tagV = v
 				case "${STX::CuePath}":
 					tagV = strings.Replace(buildInstance.Dir, buildInstance.Root, "", 1)
-				case "${STX::CueFiles}":
-					tagV = strings.Join(buildInstance.CUEFiles, ", ")
 				}
 				tags = append(tags, types.Tag{Key: &tagK, Value: &tagV})
 			}
